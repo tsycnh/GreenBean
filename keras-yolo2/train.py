@@ -27,7 +27,7 @@ def _main_(args):
     ###############################
     #   Parse the annotations 
     ###############################
-
+    # 解析训练数据。这里需要增加代码，以适应不同尺寸的图像。可以考虑填边。（平均色或纯黑色）
     # parse annotations of the training set
     train_imgs, train_labels = parse_annotation(config['train']['train_annot_folder'], 
                                                 config['train']['train_image_folder'], 
