@@ -1,0 +1,36 @@
+{
+    "model" : {
+        "backend":              "Full Yolo",
+        "input_size":           416,
+        "anchors":              [4.03,5.23, 5.63,9.58, 7.72,11.68, 9.67,8.72, 11.23,11.85],
+        "max_box_per_image":    10,        
+        "labels":               ["raccoon"]
+    },
+
+    "train": {
+        "train_image_folder":   "../raccoon_dataset/images/",
+        "train_annot_folder":   "../raccoon_dataset/annotations/",
+          
+        "train_times":          8,
+        "pretrained_weights":   "",
+        "batch_size":           16,
+        "learning_rate":        1e-4,
+        "nb_epochs":            1,
+        "warmup_epochs":        3,
+
+        "object_scale":         5.0,
+        "no_object_scale":      1.0,
+        "coord_scale":          1.0,
+        "class_scale":          1.0,
+
+        "saved_weights_name":   "full_yolo_raccoon.h5",
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_image_folder":   "",
+        "valid_annot_folder":   "",
+
+        "valid_times":          1
+    }
+}
