@@ -19,11 +19,11 @@ class SquarePad(iaa.Augmenter):
         self.all_new_shapes=[]
 
     def func_images(self,images, random_state, parents, hooks):
-        print('进入func_images')
-        print('图片数量：', len(images))
+        # print('进入func_images')
+        # print('图片数量：', len(images))
 
         for i, image in enumerate(images):
-            print('image index: ',i)
+            # print('image index: ',i)
             img_rows, img_cols, img_channels = image.shape
             bg_size = 0
             if img_rows < img_cols:  # 情况1
@@ -50,8 +50,8 @@ class SquarePad(iaa.Augmenter):
         return images
 
     def func_keypoints(self,keypoints_on_images, random_state, parents, hooks):
-        print('进入func_keypoints')
-        print(keypoints_on_images)
+        # print('进入func_keypoints')
+        # print(keypoints_on_images)
         for i in range(len(keypoints_on_images)):
             for j in range(len(keypoints_on_images[i].keypoints)):
                 keypoints_on_images[i].keypoints[j].x += self.all_offsets[i]['offset_x']

@@ -286,12 +286,12 @@ class YOLO(object):
             'TRUE_BOX_BUFFER' : self.max_box_per_image,
         }    
 
-        train_generator = BatchGenerator(train_imgs,
+        train_generator = BatchGenerator_for_USTB(train_imgs,
                                      generator_config, 
                                      norm=self.feature_extractor.normalize,
                                                   jitter=False,
                                                   shuffle=False)
-        valid_generator = BatchGenerator(valid_imgs,
+        valid_generator = BatchGenerator_for_USTB(valid_imgs,
                                      generator_config, 
                                      norm=self.feature_extractor.normalize,
                                      jitter=False)   
