@@ -1,0 +1,36 @@
+{
+    "model" : {
+        "backend":              "Full Yolo",
+        "input_size":           416,
+        "anchors":              [1.60,11.75, 2.38,2.92, 4.19,6.16, 8.34,8.40, 12.13,2.08],
+        "max_box_per_image":    10,        
+        "labels":               ["WaterDrop","RollMark","HorizontalCrack","Scale","WaterStain","VerticalCrack","Upwarping"]
+    },
+
+    "train": {
+        "train_image_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/train/images/",
+        "train_annot_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/train/annotations/",
+          
+        "train_times":          10,
+        "pretrained_weights":   "",
+        "batch_size":           16,
+        "learning_rate":        1e-4,
+        "nb_epochs":            1,
+        "warmup_epochs":        3,
+
+        "object_scale":         5.0,
+        "no_object_scale":      1.0,
+        "coord_scale":          1.0,
+        "class_scale":          1.0,
+
+        "saved_weights_name":   "full_yolo_USTB.h5",
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_image_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/test/images/",
+        "valid_annot_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/test/annotations/",
+
+        "valid_times":          1
+    }
+}

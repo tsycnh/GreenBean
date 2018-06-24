@@ -12,7 +12,7 @@ from keras.optimizers import SGD, Adam, RMSprop
 from preprocessing import BatchGenerator
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from backend import TinyYoloFeature, FullYoloFeature, MobileNetFeature, SqueezeNetFeature, Inception3Feature, VGG16Feature, ResNet50Feature
-
+from st_utils import BatchGenerator_for_USTB
 class YOLO(object):
     def __init__(self, backend,
                        input_size, 
@@ -82,6 +82,9 @@ class YOLO(object):
 
         # print a summary of the whole model
         self.model.summary()
+        # from keras.utils import plot_model
+        #
+        # plot_model(self.model, to_file='model.png')
 
     def custom_loss(self, y_true, y_pred):
         mask_shape = tf.shape(y_true)[:4]
@@ -242,7 +245,7 @@ class YOLO(object):
     def load_weights(self, weight_path):
         self.model.load_weights(weight_path)
 
-    def train(self, train_imgs,     # the list of images to train the model
+    def train(self, train_imgs,     # the list of images (with objs info) to train the model
                     valid_imgs,     # the list of images used to validate the model
                     train_times,    # the number of time to repeat the training set, often used for small datasets
                     valid_times,    # the number of times to repeat the validation set, often used for small datasets
@@ -283,10 +286,12 @@ class YOLO(object):
             'TRUE_BOX_BUFFER' : self.max_box_per_image,
         }    
 
-        train_generator = BatchGenerator(train_imgs, 
+        train_generator = BatchGenerator(train_imgs,
                                      generator_config, 
-                                     norm=self.feature_extractor.normalize)
-        valid_generator = BatchGenerator(valid_imgs, 
+                                     norm=self.feature_extractor.normalize,
+                                                  jitter=False,
+                                                  shuffle=False)
+        valid_generator = BatchGenerator(valid_imgs,
                                      generator_config, 
                                      norm=self.feature_extractor.normalize,
                                      jitter=False)   
