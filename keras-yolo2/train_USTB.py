@@ -21,7 +21,7 @@ argparser.add_argument(
 def _main_(args):
     config_path = args.conf
 
-    with open(config_path) as config_buffer:    
+    with open(config_path,encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
 
     ###############################

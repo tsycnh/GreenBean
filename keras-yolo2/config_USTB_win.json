@@ -8,14 +8,14 @@
     },
 
     "train": {
-        "train_image_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/train/images/",
-        "train_annot_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/train/annotations/",
+        "train_image_folder":   "D:/TSY/USTBdata/data/train/images/",
+        "train_annot_folder":   "D:/TSY/USTBdata/data/train/annotations/",
           
         "train_times":          10,
         "pretrained_weights":   "",
-        "batch_size":           4,
+        "batch_size":           16,
         "learning_rate":        1e-4,
-        "nb_epochs":            1,
+        "nb_epochs":            10,
         "warmup_epochs":        3,
 
         "object_scale":         5.0,
@@ -28,8 +28,8 @@
     },
 
     "valid": {
-        "valid_image_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/test/images/",
-        "valid_annot_folder":   "/Users/shidanlifuhetian/All/data/KHB_ANNO/USTB中厚板检测数据集/test/annotations/",
+        "valid_image_folder":   "D:/TSY/USTBdata/data/test/images/",
+        "valid_annot_folder":   "D:/TSY/USTBdata/data/test/annotations/",
 
         "valid_times":          1
     }
