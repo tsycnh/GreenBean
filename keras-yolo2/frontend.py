@@ -388,7 +388,7 @@ class YOLO(object):
             aug_class_id = image_data['aug']['class_id']
             annots = []
             for j,obj in enumerate(aug_annotation.bounding_boxes):
-                annot = [obj['x1'], obj['y1'], obj['x2'], obj['y2'], aug_class_id[j]]
+                annot = [obj.x1, obj.y1, obj.x2, obj.y2, aug_class_id[j]]
                 annots += [annot]
 
             if len(annots) == 0: annots = [[]]
