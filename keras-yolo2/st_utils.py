@@ -81,7 +81,8 @@ class BatchGenerator_for_USTB(Sequence):
                        config,
                        shuffle=True,
                        jitter=True,
-                       norm=None):
+                       norm=None,
+                 debug=False):
         self.generator = None
 
         self.images_with_objs = images
@@ -92,19 +93,24 @@ class BatchGenerator_for_USTB(Sequence):
         self.norm    = norm
 
         self.anchors = [BoundBox(0, 0, config['ANCHORS'][2*i], config['ANCHORS'][2*i+1]) for i in range(int(len(config['ANCHORS'])//2))]
-
+        self.debug = debug
         # sometimes = lambda aug: iaa.Sometimes(0.5, aug)
 
         # Define our sequence of augmentation steps that will be applied to every image
         # All augmenters with per_channel=0.5 will sample one value _per image_
         # in 50% of all cases. In all other cases they will sample new values
         # _per channel_.self.config['IMAGE_H'], self.config['IMAGE_W']
-        self.aug_pipe = iaa.Sequential([SquarePad(),iaa.Scale({"height": self.config['IMAGE_H'], "width": self.config['IMAGE_W']})])
+        sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+
+        self.aug_pipe = iaa.Sequential([SquarePad(),
+                                        sometimes(iaa.Fliplr(p=1)),
+                                        sometimes(iaa.Flipud(p=1)),
+                                        iaa.Scale({"height": self.config['IMAGE_H'], "width": self.config['IMAGE_W']})])
         # if shuffle: np.random.shuffle(self.images)
 
     def __len__(self):
         return int(np.ceil(float(len(self.images_with_objs)) / self.config['BATCH_SIZE']))
-    def __getitem__(self, idx,debug=False):
+    def __getitem__(self, idx):
         #1. 确定当前batch在整个数据序列中的位置
         l_bound = idx*self.config['BATCH_SIZE']
         r_bound = (idx+1)*self.config['BATCH_SIZE']
@@ -120,14 +126,7 @@ class BatchGenerator_for_USTB(Sequence):
         y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+len(self.config['LABELS'])))                # desired network output
 
         aug_imgs,aug_bbses,aug_clses = self.aug_image(l_bound,r_bound)
-        if debug:
-            for i, _ in enumerate(aug_imgs):
-                # image_before = bbses[i].draw_on_image(imgs[i])
-                image_after = aug_bbses[i].draw_on_image(aug_imgs[i])
-                # cv.imshow('before' + str(i + 1), image_before)
-                cv.imshow('after' + str(i + 1), image_after)
-            # pass
-            # cv.waitKey(0)
+
         #2. 循环每一张图，制造yolo专用标签
         for i in range(0,len(aug_imgs)):
             # augment input image and fix object's position and size
@@ -288,6 +287,15 @@ class BatchGenerator_for_USTB(Sequence):
         aug_imgs = aug_pipe_det.augment_images(imgs)
         aug_bbses = aug_pipe_det.augment_bounding_boxes(bbses)
         aug_clses = ys
+
+        if self.debug:
+            for i, _ in enumerate(aug_imgs):
+                image_before = bbses[i].draw_on_image(imgs[i])
+                image_after = aug_bbses[i].draw_on_image(aug_imgs[i])
+                cv.imshow('before' + str(i + 1), image_before)
+                cv.imshow('after' + str(i + 1), image_after)
+            # pass
+            # cv.waitKey(0)
         return aug_imgs,aug_bbses,aug_clses
     def aug_image_legacy(self, train_instance, jitter):
         image_name = train_instance['filename']
