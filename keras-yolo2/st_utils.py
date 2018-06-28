@@ -104,7 +104,7 @@ class BatchGenerator_for_USTB(Sequence):
 
     def __len__(self):
         return int(np.ceil(float(len(self.images_with_objs)) / self.config['BATCH_SIZE']))
-    def __getitem__(self, idx):
+    def __getitem__(self, idx,debug=False):
         #1. 确定当前batch在整个数据序列中的位置
         l_bound = idx*self.config['BATCH_SIZE']
         r_bound = (idx+1)*self.config['BATCH_SIZE']
@@ -119,41 +119,15 @@ class BatchGenerator_for_USTB(Sequence):
         b_batch = np.zeros((r_bound - l_bound, 1     , 1     , 1    ,  self.config['TRUE_BOX_BUFFER'], 4))   # list of self.config['TRUE_self.config['BOX']_BUFFER'] GT boxes
         y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+len(self.config['LABELS'])))                # desired network output
 
-        #2.读取图像和label
-        bbses = []
-        imgs = []
-        ys = []
-        for i in range(l_bound,r_bound):
-            img = cv.imread(self.images_with_objs[i]['filename'])
-            tmp_bbox = []
-            tmp_y = []
-            for bbox in self.images_with_objs[i]['object']:
-                tmp_bbox.append(ia.BoundingBox(
-                    x1=bbox['xmin'],
-                    y1=bbox['ymin'],
-                    x2=bbox['xmax'],
-                    y2=bbox['ymax']
-                ))
-                tmp_y.append(bbox['name'])
-            bbs = ia.BoundingBoxesOnImage(tmp_bbox,shape=img.shape)
-            imgs.append(img)
-            bbses.append(bbs)
-            ys.append(tmp_y)
-
-        #3. 图像预处理
-        qug_pipe_det = self.aug_pipe.to_deterministic()
-
-        aug_imgs = qug_pipe_det.augment_images(imgs)
-        aug_bbses = qug_pipe_det.augment_bounding_boxes(bbses)
-        aug_clses = ys
-
-        # for i, _ in enumerate(aug_imgs):
-        #     image_before = bbses[i].draw_on_image(imgs[i])
-        #     image_after = aug_bbses[i].draw_on_image(aug_imgs[i])
-        #     cv.imshow('before' + str(i + 1), image_before)
-        #     cv.imshow('after' + str(i + 1), image_after)
-        # pass
-        # cv.waitKey(0)
+        aug_imgs,aug_bbses,aug_clses = self.aug_image(l_bound,r_bound)
+        if debug:
+            for i, _ in enumerate(aug_imgs):
+                # image_before = bbses[i].draw_on_image(imgs[i])
+                image_after = aug_bbses[i].draw_on_image(aug_imgs[i])
+                # cv.imshow('before' + str(i + 1), image_before)
+                cv.imshow('after' + str(i + 1), image_after)
+            # pass
+            # cv.waitKey(0)
         #2. 循环每一张图，制造yolo专用标签
         for i in range(0,len(aug_imgs)):
             # augment input image and fix object's position and size
@@ -247,6 +221,9 @@ class BatchGenerator_for_USTB(Sequence):
     def size(self):
         return len(self.images_with_objs)
 
+    # 目前来看，load_annotation和load_image函数仅在训练完毕后评价mAP的时候调用
+    # 所以修改一下，让其载入的图像是经过padding的
+
     def load_annotation(self, i):
         annots = []
 
@@ -258,13 +235,58 @@ class BatchGenerator_for_USTB(Sequence):
 
         return np.array(annots)
 
+    # load_image 应保证从这个Generator里面取出的图像永远符合网络需求。
     def load_image(self, i):
-        return cv2.imread(self.images_with_objs[i]['filename'])
+        origin_image = cv2.imread(self.images_with_objs[i]['filename'])
+        aug_imgs, aug_bbses, aug_clses = self.aug_image(i,i+1)
+        return {
+            'origin':{
+                'image':origin_image,
+                'annotation':None
+            },
+            'aug': {
+                'image': aug_imgs[0],
+                'annotation': aug_bbses[0],
+                'class_id':self.config['LABELS'].index(aug_clses[0]),
+                'class':aug_clses[0],
+            },
+        }
 
     def on_epoch_end(self):
         if self.shuffle: np.random.shuffle(self.images_with_objs)
+    def aug_image(self,l_bound,r_bound):
+        # 2.读取图像和label(每次一批）
+        bbses = []
+        imgs = []
+        ys = []
+        for i in range(l_bound, r_bound):
+            img = cv.imread(self.images_with_objs[i]['filename'])
+            annotation = self.images_with_objs[i]['object']
+            # --------------
+            tmp_bbox = []
+            tmp_y = []
+            for bbox in annotation:
+                tmp_bbox.append(ia.BoundingBox(
+                    x1=bbox['xmin'],
+                    y1=bbox['ymin'],
+                    x2=bbox['xmax'],
+                    y2=bbox['ymax']
+                ))
+                tmp_y.append(bbox['name'])
+            bbs = ia.BoundingBoxesOnImage(tmp_bbox, shape=img.shape)
+            # --------------
+            imgs.append(img)
+            bbses.append(bbs)
+            ys.append(tmp_y)
 
-    def aug_image(self, train_instance, jitter):
+        # 3. 图像预处理
+        aug_pipe_det = self.aug_pipe.to_deterministic()
+
+        aug_imgs = aug_pipe_det.augment_images(imgs)
+        aug_bbses = aug_pipe_det.augment_bounding_boxes(bbses)
+        aug_clses = ys
+        return aug_imgs,aug_bbses,aug_clses
+    def aug_image_legacy(self, train_instance, jitter):
         image_name = train_instance['filename']
         image = cv2.imread(image_name)
 

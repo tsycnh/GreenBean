@@ -320,10 +320,10 @@ class YOLO(object):
                                      save_best_only=True, 
                                      mode='min', 
                                      period=1)
-        tensorboard = TensorBoard(log_dir=os.path.expanduser('~/logs/'), 
+        tensorboard = TensorBoard(log_dir='./logs/',
                                   histogram_freq=0, 
                                   #write_batch_performance=True,
-                                  write_graph=True, 
+                                  write_graph=False,
                                   write_images=False)
 
         ############################################
@@ -358,6 +358,12 @@ class YOLO(object):
                  save_path=None):
         """ Evaluate a given dataset using a given model.
         code originally from https://github.com/fizyr/keras-retinanet
+        '''
+        目前的检测逻辑：
+        1. 按照序号载入原图。
+        2. 将原图硬性拉成416*416大小进行检测，给出预测值bbox
+        3. 载入annotation
+        '''
 
         # Arguments
             generator       : The generator that represents the dataset to evaluate.
@@ -373,13 +379,24 @@ class YOLO(object):
         all_detections     = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
         all_annotations    = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
 
+        # 对验证集里的所有的图像逐一的进行验证
         for i in range(generator.size()):
-            raw_image = generator.load_image(i)
-            raw_height, raw_width, raw_channels = raw_image.shape
+            # 载入带黑边的，符合网络尺寸的大图
+            image_data = generator.load_image(i)
+            aug_image = image_data['aug']['image']
+            aug_annotation = image_data['aug']['annotation']
+            aug_class_id = image_data['aug']['class_id']
+            annots = []
+            for j,obj in enumerate(aug_annotation.bounding_boxes):
+                annot = [obj['x1'], obj['y1'], obj['x2'], obj['y2'], aug_class_id[j]]
+                annots += [annot]
+
+            if len(annots) == 0: annots = [[]]
+            annotations = np.array(annots)
+            raw_height, raw_width, raw_channels = aug_image.shape
 
             # make the boxes and the labels
-            pred_boxes  = self.predict(raw_image)
-
+            pred_boxes  = self.predict(aug_image)
             
             score = np.array([box.score for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])        
@@ -398,7 +415,7 @@ class YOLO(object):
             for label in range(generator.num_classes()):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
                 
-            annotations = generator.load_annotation(i)
+            # annotations = generator.load_annotation(i)
             
             # copy detections to all_annotations
             for label in range(generator.num_classes()):
@@ -463,9 +480,13 @@ class YOLO(object):
 
         return average_precisions    
 
+    # 现在单看predict函数，输入一张图，强制拉伸为416*416，检测输出bbox
+    # 更改：将强制拉伸解除。意味着输入必须是合规大小的图像
     def predict(self, image):
         image_h, image_w, _ = image.shape
-        image = cv2.resize(image, (self.input_size, self.input_size))
+        if image_h != self.input_size or image_w != self.input_size:
+            raise ValueError
+        # image = cv2.resize(image, (self.input_size, self.input_size))
         image = self.feature_extractor.normalize(image)
 
         input_image = image[:,:,::-1]
