@@ -311,7 +311,7 @@ class YOLO(object):
 
         early_stop = EarlyStopping(monitor='val_loss', 
                            min_delta=0.001, 
-                           patience=3, 
+                           patience=10,
                            mode='min', 
                            verbose=1)
         checkpoint = ModelCheckpoint(saved_weights_name, 
@@ -343,7 +343,7 @@ class YOLO(object):
         ############################################
         # Compute mAP on the validation set
         ############################################
-        average_precisions = self.evaluate(valid_generator)     
+        average_precisions = self.evaluate(valid_generator)
 
         # print evaluation
         for label, average_precision in average_precisions.items():
@@ -397,7 +397,7 @@ class YOLO(object):
 
             # make the boxes and the labels
             pred_boxes  = self.predict(aug_image)
-            
+            print('predicted boxes:',pred_boxes)
             score = np.array([box.score for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])        
             
@@ -489,8 +489,8 @@ class YOLO(object):
         # image = cv2.resize(image, (self.input_size, self.input_size))
         image = self.feature_extractor.normalize(image)
 
-        input_image = image[:,:,::-1]
-        input_image = np.expand_dims(input_image, 0)
+        #input_image = image[:,:,::-1]
+        input_image = np.expand_dims(image,0)
         dummy_array = np.zeros((1,1,1,1,self.max_box_per_image,4))
 
         netout = self.model.predict([input_image, dummy_array])[0]

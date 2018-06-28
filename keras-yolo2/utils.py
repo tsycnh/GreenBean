@@ -78,12 +78,15 @@ def decode_netout(netout, anchors, nb_class, obj_threshold=0.3, nms_threshold=0.
     grid_h, grid_w, nb_box = netout.shape[:3]
 
     boxes = []
-    
+    #print('before:',netout[0][0][0])
     # decode the output by the network
     netout[..., 4]  = _sigmoid(netout[..., 4])
+    #print('1:',netout[0][0][0])
     netout[..., 5:] = netout[..., 4][..., np.newaxis] * _softmax(netout[..., 5:])
+    #print('2:',netout[0][0][0])
     netout[..., 5:] *= netout[..., 5:] > obj_threshold
-    
+    #print('after:',netout[0][0][0])
+
     for row in range(grid_h):
         for col in range(grid_w):
             for b in range(nb_box):

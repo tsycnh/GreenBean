@@ -9,7 +9,9 @@ import json
 from st_utils import BatchGenerator_for_USTB
 
 if __name__ == "__main__":
-    config_path = './config_USTB.json'
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    config_path = './config_USTB_win.json'
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
@@ -72,7 +74,7 @@ if __name__ == "__main__":
         norm = yolo.feature_extractor.normalize,
         jitter = False)
 
-    average_precisions = yolo.evaluate(valid_generator)
+    average_precisions = yolo.evaluate(valid_generator,iou_threshold=0.01,score_threshold=0.01)
 
     # print evaluation
     for label, average_precision in average_precisions.items():
