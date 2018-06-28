@@ -239,6 +239,9 @@ class BatchGenerator_for_USTB(Sequence):
     def load_image(self, i):
         origin_image = cv2.imread(self.images_with_objs[i]['filename'])
         aug_imgs, aug_bbses, aug_clses = self.aug_image(i,i+1)
+        class_ids = []
+        for obj in aug_clses[0]:
+            class_ids.append(self.config['LABELS'].index(obj))
         return {
             'origin':{
                 'image':origin_image,
@@ -247,7 +250,7 @@ class BatchGenerator_for_USTB(Sequence):
             'aug': {
                 'image': aug_imgs[0],
                 'annotation': aug_bbses[0],
-                'class_id':self.config['LABELS'].index(aug_clses[0]),
+                'class_id':class_ids,
                 'class':aug_clses[0],
             },
         }
