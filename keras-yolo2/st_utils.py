@@ -180,6 +180,10 @@ class BatchGenerator_for_USTB(Sequence):
                                 best_anchor = i
                                 max_iou     = iou
 
+                        print('grid_x:',grid_x)
+                        print('grid_y:',grid_y)
+                        if grid_y <0 or grid_x <0:
+                             a= 1
                         # assign ground truth x, y, w, h, confidence and class probs to y_batch
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 0:4] = box
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 4  ] = 1.

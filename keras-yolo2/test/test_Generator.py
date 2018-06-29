@@ -32,21 +32,16 @@ if __name__ == "__main__":
         print(result['aug']['annotation'])
     def test_getitem():
     # print(train_imgs,train_labels)
-        d = generator.__getitem__(0,debug=False)
-        image = d[0][0][2].astype('uint8')
-        cv2.imshow('output',image)
+        generator.debug = False
+        d = generator.__getitem__(0)
+        # image = d[0][0][2].astype('uint8')
+        # cv2.imshow('output',image)
 
-
-        bbs = ia.BoundingBoxesOnImage([
-            ia.BoundingBox(x1=25, x2=75, y1=25, y2=75),
-            ia.BoundingBox(x1=100, x2=150, y1=25, y2=75)
-        ], shape=image.shape)
-        bbs.on(image)
         #绘制bbox需要先project on 已padding的黑边图像，然后再on到原图
     # test load image
 
-    # test_getitem()
-    test_load_image()
+    test_getitem()
+    # test_load_image()
 
     cv2.waitKey(0)
 
