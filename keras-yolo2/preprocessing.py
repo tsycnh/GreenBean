@@ -177,7 +177,7 @@ class BatchGenerator(Sequence):
             
             # construct output from object's x, y, w, h
             true_box_index = 0
-            
+
             for obj in all_objs:
                 if obj['xmax'] > obj['xmin'] and obj['ymax'] > obj['ymin'] and obj['name'] in self.config['LABELS']:
                     center_x = .5*(obj['xmin'] + obj['xmax'])
@@ -190,42 +190,42 @@ class BatchGenerator(Sequence):
 
                     if grid_x < self.config['GRID_W'] and grid_y < self.config['GRID_H']:
                         obj_indx  = self.config['LABELS'].index(obj['name'])
-                        
+
                         center_w = (obj['xmax'] - obj['xmin']) / (float(self.config['IMAGE_W']) / self.config['GRID_W']) # unit: grid cell
                         center_h = (obj['ymax'] - obj['ymin']) / (float(self.config['IMAGE_H']) / self.config['GRID_H']) # unit: grid cell
-                        
+
                         box = [center_x, center_y, center_w, center_h]
 
                         # find the anchor that best predicts this box
                         best_anchor = -1
                         max_iou     = -1
-                        
-                        shifted_box = BoundBox(0, 
+
+                        shifted_box = BoundBox(0,
                                                0,
-                                               center_w,                                                
+                                               center_w,
                                                center_h)
-                        
+
                         for i in range(len(self.anchors)):
                             anchor = self.anchors[i]
                             iou    = bbox_iou(shifted_box, anchor)
-                            
+
                             if max_iou < iou:
                                 best_anchor = i
                                 max_iou     = iou
-                                
+
                         # assign ground truth x, y, w, h, confidence and class probs to y_batch
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 0:4] = box
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 4  ] = 1.
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 5+obj_indx] = 1
-                        
+
                         # assign the true box to b_batch
                         b_batch[instance_count, 0, 0, 0, true_box_index] = box
-                        
+
                         true_box_index += 1
                         true_box_index = true_box_index % self.config['TRUE_BOX_BUFFER']
-                            
+
             # assign input image to x_batch
-            if self.norm != None: 
+            if self.norm != None:
                 x_batch[instance_count] = self.norm(img)
             else:
                 # plot image and bounding boxes for sanity check
