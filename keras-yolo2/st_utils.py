@@ -21,7 +21,8 @@ class SquarePad(iaa.Augmenter):
     def func_images(self,images, random_state, parents, hooks):
         # print('进入func_images')
         # print('图片数量：', len(images))
-
+        self.all_offsets = []
+        self.all_new_shapes = []
         for i, image in enumerate(images):
             # print('image index: ',i)
             img_rows, img_cols, img_channels = image.shape
@@ -172,14 +173,18 @@ class BatchGenerator_for_USTB(Sequence):
                                                center_w,
                                                center_h)
 
-                        for i in range(len(self.anchors)):
-                            anchor = self.anchors[i]
+                        for k in range(len(self.anchors)):
+                            anchor = self.anchors[k]
                             iou    = bbox_iou(shifted_box, anchor)
 
                             if max_iou < iou:
-                                best_anchor = i
+                                best_anchor = k
                                 max_iou     = iou
-
+                        if grid_x < 0:
+                            a = 1
+                            b=a
+                        print('grid_x: ',grid_x)
+                        print('grid_y: ',grid_y)
                         # assign ground truth x, y, w, h, confidence and class probs to y_batch
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 0:4] = box
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 4  ] = 1.
@@ -269,10 +274,10 @@ class BatchGenerator_for_USTB(Sequence):
             tmp_y = []
             for bbox in annotation:
                 tmp_bbox.append(ia.BoundingBox(
-                    x1=bbox['xmin'],
-                    y1=bbox['ymin'],
-                    x2=bbox['xmax'],
-                    y2=bbox['ymax']
+                    x1=bbox['xmin']-1,
+                    y1=bbox['ymin']-1,
+                    x2=bbox['xmax']-1,
+                    y2=bbox['ymax']-1,
                 ))
                 tmp_y.append(bbox['name'])
             bbs = ia.BoundingBoxesOnImage(tmp_bbox, shape=img.shape)
@@ -281,6 +286,7 @@ class BatchGenerator_for_USTB(Sequence):
             bbses.append(bbs)
             ys.append(tmp_y)
 
+        #print('bbses before:',bbses)
         # 3. 图像预处理
         aug_pipe_det = self.aug_pipe.to_deterministic()
 
@@ -288,6 +294,7 @@ class BatchGenerator_for_USTB(Sequence):
         aug_bbses = aug_pipe_det.augment_bounding_boxes(bbses)
         aug_clses = ys
 
+        #print('bbses after',)
         if self.debug:
             for i, _ in enumerate(aug_imgs):
                 image_before = bbses[i].draw_on_image(imgs[i])
