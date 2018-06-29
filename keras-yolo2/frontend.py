@@ -336,7 +336,7 @@ class YOLO(object):
                                  verbose          = 2 if debug else 1,
                                  validation_data  = valid_generator,
                                  validation_steps = len(valid_generator) * valid_times,
-                                 callbacks        = [early_stop, checkpoint, tensorboard], 
+                                 callbacks        = [ checkpoint, tensorboard],
                                  workers          = 3,
                                  max_queue_size   = 8)      
 
