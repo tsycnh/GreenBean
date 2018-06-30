@@ -6,12 +6,12 @@ import numpy as np
 from preprocessing import parse_annotation
 from frontend import YOLO
 import json
-from st_utils import BatchGenerator_for_USTB
+from st_utils import BatchGenerator_for_USTB,draw_detections
 
 if __name__ == "__main__":
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    config_path = './config_USTB_win.json'
+    config_path = './config_USTB.json'
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         norm = yolo.feature_extractor.normalize,
         jitter = False)
 
-    average_precisions = yolo.evaluate(valid_generator,iou_threshold=0.01,score_threshold=0.01)
+    average_precisions = yolo.evaluate(valid_generator,save_path='detection_result')
 
     # print evaluation
     for label, average_precision in average_precisions.items():

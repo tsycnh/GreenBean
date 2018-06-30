@@ -12,7 +12,10 @@ from keras.optimizers import SGD, Adam, RMSprop
 from preprocessing import BatchGenerator
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from backend import TinyYoloFeature, FullYoloFeature, MobileNetFeature, SqueezeNetFeature, Inception3Feature, VGG16Feature, ResNet50Feature
-from st_utils import BatchGenerator_for_USTB
+from st_utils import BatchGenerator_for_USTB,draw_detections
+import shutil
+
+
 class YOLO(object):
     def __init__(self, backend,
                        input_size, 
@@ -343,7 +346,7 @@ class YOLO(object):
         ############################################
         # Compute mAP on the validation set
         ############################################
-        average_precisions = self.evaluate(valid_generator)
+        average_precisions = self.evaluate(valid_generator,save_path='dts')
 
         # print evaluation
         for label, average_precision in average_precisions.items():
@@ -378,13 +381,16 @@ class YOLO(object):
         # gather all detections and annotations
         all_detections     = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
         all_annotations    = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
-
+        if save_path != None:
+            if os.path.exists(save_path):
+                shutil.rmtree(save_path)
+            os.mkdir(save_path)
         # 对验证集里的所有的图像逐一的进行验证
         for i in range(generator.size()):
             # 载入带黑边的，符合网络尺寸的大图
             image_data = generator.load_image(i)
             aug_image = image_data['aug']['image']
-            aug_annotation = image_data['aug']['annotation']
+            aug_annotation = image_data['aug']['annotation']# ground truth
             aug_class_id = image_data['aug']['class_id']
             annots = []
             for j,obj in enumerate(aug_annotation.bounding_boxes):
@@ -410,7 +416,21 @@ class YOLO(object):
             score_sort = np.argsort(-score)
             pred_labels = pred_labels[score_sort]
             pred_boxes  = pred_boxes[score_sort]
-            
+            # -- draw detection results --
+            if save_path != None:
+                dts = []
+                labels = []
+                gts = []
+                for k,pred_box in enumerate(pred_boxes):
+                    dt = [int(pred_box[0]),int(pred_box[1]),int(pred_box[2]),int(pred_box[3]),
+                          round(pred_box[4],2),self.labels[pred_labels[k]]]
+                    dts.append(dt)
+                for l,gt_box in enumerate(aug_annotation.bounding_boxes):
+                    gts.append([gt_box.x1,gt_box.y1,gt_box.x2,gt_box.y2,self.labels[aug_class_id[l]]])
+
+                result_img = draw_detections(bg=aug_image,detections=dts,gt=gts)
+                cv2.imwrite(save_path+'/%d.jpg'%i,result_img)
+            # ----------------------------
             # copy detections to all_detections
             for label in range(generator.num_classes()):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
@@ -420,7 +440,8 @@ class YOLO(object):
             # copy detections to all_annotations
             for label in range(generator.num_classes()):
                 all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
-                
+
+
         # compute mAP by comparing all detections and all annotations
         average_precisions = {}
         

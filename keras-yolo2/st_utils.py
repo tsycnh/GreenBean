@@ -352,3 +352,17 @@ class BatchGenerator_for_USTB(Sequence):
         #         obj['xmax'] = self.config['IMAGE_W'] - xmin
 
         return image, all_objs
+
+def draw_detections(bg, detections, gt):
+    # detections: x1,y1,x2,y2,c,label
+    #            c: 0~1的置信度
+    #            label:类别
+    # gt: x1,y1,x2,y2,label真值
+    for rect in detections:
+        cv2.rectangle(bg,pt1=(rect[0],rect[1]),pt2=(rect[2],rect[3]),color=(0,0,255))
+        cv2.putText(bg,str(rect[4])+' '+rect[5],(rect[2],rect[1]),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,255))
+    for rect in gt:
+        cv2.rectangle(bg,pt1=(rect[0],rect[1]),pt2=(rect[2],rect[3]),color=(0,255,0))
+        cv2.putText(bg,'gt '+rect[4],(rect[0],rect[1]),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,255,0))
+
+    return bg
