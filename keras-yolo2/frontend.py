@@ -14,7 +14,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from backend import TinyYoloFeature, FullYoloFeature, MobileNetFeature, SqueezeNetFeature, Inception3Feature, VGG16Feature, ResNet50Feature
 from st_utils import BatchGenerator_for_USTB,draw_detections
 import shutil
-
+import time
 
 class YOLO(object):
     def __init__(self, backend,
@@ -385,6 +385,7 @@ class YOLO(object):
             if os.path.exists(save_path):
                 shutil.rmtree(save_path)
             os.mkdir(save_path)
+        start_time = time.time()
         # 对验证集里的所有的图像逐一的进行验证
         for i in range(generator.size()):
             # 载入带黑边的，符合网络尺寸的大图
@@ -428,8 +429,8 @@ class YOLO(object):
                 for l,gt_box in enumerate(aug_annotation.bounding_boxes):
                     gts.append([gt_box.x1,gt_box.y1,gt_box.x2,gt_box.y2,self.labels[aug_class_id[l]]])
 
-                result_img = draw_detections(bg=aug_image,detections=dts,gt=gts)
-                cv2.imwrite(save_path+'/%d.jpg'%i,result_img)
+                result_img = draw_detections(bg=aug_image,detections=dts,gt=gts,hide_gt=True,hide_confidence=True)
+                cv2.imwrite(save_path+'/%d.jpg'%i,result_img,[int(cv2.IMWRITE_JPEG_QUALITY), 100])
             # ----------------------------
             # copy detections to all_detections
             for label in range(generator.num_classes()):
@@ -441,6 +442,9 @@ class YOLO(object):
             for label in range(generator.num_classes()):
                 all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
 
+        end_time = time.time()
+        print("elapsed time: ",start_time-end_time)
+        print('total images: ',generator.size())
 
         # compute mAP by comparing all detections and all annotations
         average_precisions = {}

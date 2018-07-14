@@ -12,6 +12,7 @@ if __name__ == "__main__":
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     config_path = './config_USTB.json'
+    weight_path = './full_yolo_USTB_7种缺陷_实验1.h5'
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     #   Load the pretrained weights (if any)
     ###############################
 
-    yolo.load_weights('full_yolo_USTB.h5')
+    yolo.load_weights(weight_path)
     generator_config = {
                 'IMAGE_H'         : config['model']['input_size'],
                 'IMAGE_W'         : config['model']['input_size'],

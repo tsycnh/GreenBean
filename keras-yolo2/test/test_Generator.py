@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     def test_load_image():
         result = generator.load_image(2)
-        # cv2.imshow('img_0', result['aug']['image'])
+        cv2.imshow('img_0', result['aug']['image'])
         print(result['aug']['annotation'])
     def test_getitem():
     # print(train_imgs,train_labels)
@@ -40,8 +40,8 @@ if __name__ == "__main__":
         #绘制bbox需要先project on 已padding的黑边图像，然后再on到原图
     # test load image
 
-    test_getitem()
-    # test_load_image()
+    # test_getitem()
+    test_load_image()
 
     cv2.waitKey(0)
 
