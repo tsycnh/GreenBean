@@ -404,7 +404,8 @@ class YOLO(object):
 
             # make the boxes and the labels
             pred_boxes  = self.predict(aug_image)
-            print('predicted boxes:',pred_boxes)
+            if save_path != None:
+                print('predicted boxes:',pred_boxes)
             score = np.array([box.score for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])        
             
@@ -443,7 +444,7 @@ class YOLO(object):
                 all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
 
         end_time = time.time()
-        print("elapsed time: ",start_time-end_time)
+        print("elapsed time: ",end_time-start_time)
         print('total images: ',generator.size())
 
         # compute mAP by comparing all detections and all annotations
