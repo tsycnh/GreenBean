@@ -28,7 +28,8 @@ class YOLO(object):
         self.labels   = list(labels)
         self.nb_class = len(self.labels)
         self.nb_box   = len(anchors)//2
-        self.class_wt = np.ones(self.nb_class, dtype='float32')
+        # self.class_wt = np.ones(self.nb_class, dtype='float32')#origin
+        self.class_wt = np.ones(9, dtype='float32')# new
         self.anchors  = anchors
 
         self.max_box_per_image = max_box_per_image
@@ -63,12 +64,18 @@ class YOLO(object):
         features = self.feature_extractor.extract(input_image)            
 
         # make the object detection layer
-        output = Conv2D(self.nb_box * (4 + 1 + self.nb_class), 
-                        (1,1), strides=(1,1), 
-                        padding='same', 
-                        name='DetectionLayer', 
+        # output = Conv2D(self.nb_box * (4 + 1 + self.nb_class), #origin
+        #                 (1,1), strides=(1,1),
+        #                 padding='same',
+        #                 name='DetectionLayer',
+        #                 kernel_initializer='lecun_normal')(features)
+        output = Conv2D(self.nb_box * (4 + 1 + 9), # new
+                        (1,1), strides=(1,1),
+                        padding='same',
+                        name='DetectionLayer',
                         kernel_initializer='lecun_normal')(features)
-        output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + self.nb_class))(output)
+        # output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + self.nb_class))(output)#@@
+        output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + 9))(output)#@@
         output = Lambda(lambda args: args[0])([output, self.true_boxes])
 
         self.model = Model([input_image, self.true_boxes], output)
@@ -81,7 +88,7 @@ class YOLO(object):
         new_kernel = np.random.normal(size=weights[0].shape)/(self.grid_h*self.grid_w)
         new_bias   = np.random.normal(size=weights[1].shape)/(self.grid_h*self.grid_w)
 
-        layer.set_weights([new_kernel, new_bias])
+        layer.set_weights([new_kernel, new_bias])# the detection layer
 
         # print a summary of the whole model
         self.model.summary()

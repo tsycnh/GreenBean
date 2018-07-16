@@ -11,6 +11,16 @@ import keras
 from os import environ
 environ['SCIPY_PIL_IMAGE_VIEWER'] = '/Applications/LilyView.app/Contents/MacOS/LilyView'
 
+class_map = {
+    "WaterDrop"         : '100001000',
+    "RollMark"          : '100010000',
+    "HorizontalCrack"   : '001010000',
+    "Scale"             : '010001000',
+    "WaterStain"        : '001001001',
+    "VerticalCrack"     : '001001010',
+    "Upwarping"         : '010010000',
+}
+
 class SquarePad(iaa.Augmenter):
 
     def __init__(self, name=None, deterministic=False, random_state=None):
@@ -124,7 +134,8 @@ class BatchGenerator_for_USTB(Sequence):
 
         x_batch = np.zeros((r_bound - l_bound, self.config['IMAGE_H'], self.config['IMAGE_W'], 3))                         # input images
         b_batch = np.zeros((r_bound - l_bound, 1     , 1     , 1    ,  self.config['TRUE_BOX_BUFFER'], 4))   # list of self.config['TRUE_self.config['BOX']_BUFFER'] GT boxes
-        y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+len(self.config['LABELS'])))                # desired network output
+        # y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+len(self.config['LABELS'])))                # desired network output
+        y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+9))#new
 
         aug_imgs,aug_bbses,aug_clses = self.aug_image(l_bound,r_bound)
 
@@ -182,10 +193,12 @@ class BatchGenerator_for_USTB(Sequence):
                                 max_iou     = iou
 
                         # assign ground truth x, y, w, h, confidence and class probs to y_batch
+                        print('before:',y_batch[instance_count, grid_y, grid_x, best_anchor])
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 0:4] = box
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 4  ] = 1.
-                        y_batch[instance_count, grid_y, grid_x, best_anchor, 5+obj_indx] = 1
-
+                        y_batch[instance_count, grid_y, grid_x, best_anchor, 5:] = \
+                            (lambda x:[int(y) for y in x])(class_map[obj['name']])# new
+                        print('after:',y_batch[instance_count, grid_y, grid_x, best_anchor])
                         # assign the true box to b_batch
                         b_batch[instance_count, 0, 0, 0, true_box_index] = box
 
