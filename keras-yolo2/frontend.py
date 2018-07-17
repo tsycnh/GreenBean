@@ -125,7 +125,10 @@ class YOLO(object):
         
         ### adjust class probabilities
         pred_box_class = y_pred[..., 5:]
-        
+        pred_box_class_1 = y_pred[..., 5:8]
+        pred_box_class_2 = y_pred[..., 8:11]
+        pred_box_class_3 = y_pred[..., 11:14]
+
         """
         Adjust ground truth
         """
@@ -156,10 +159,15 @@ class YOLO(object):
         iou_scores  = tf.truediv(intersect_areas, union_areas)
         
         true_box_conf = iou_scores * y_true[..., 4]
-        
+        # print('y_true:',y_true)
+        # print('y_pred:',y_pred)
         ### adjust class probabilities
         true_box_class = tf.argmax(y_true[..., 5:], -1)
-        
+
+        true_box_class_1 = y_true[..., 5:8]
+        true_box_class_2 = y_true[..., 8:11]
+        true_box_class_3 = y_true[..., 11:14]
+
         """
         Determine the masks
         """
@@ -228,8 +236,14 @@ class YOLO(object):
         loss_xy    = tf.reduce_sum(tf.square(true_box_xy-pred_box_xy)     * coord_mask) / (nb_coord_box + 1e-6) / 2.
         loss_wh    = tf.reduce_sum(tf.square(true_box_wh-pred_box_wh)     * coord_mask) / (nb_coord_box + 1e-6) / 2.
         loss_conf  = tf.reduce_sum(tf.square(true_box_conf-pred_box_conf) * conf_mask)  / (nb_conf_box  + 1e-6) / 2.
-        loss_class = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class)
-        loss_class = tf.reduce_sum(loss_class * class_mask) / (nb_class_box + 1e-6)
+
+        # loss_class = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class)
+        loss_class_1 = tf.nn.softmax_cross_entropy_with_logits(labels=true_box_class_1,logits=pred_box_class_1)
+        loss_class_2 = tf.nn.softmax_cross_entropy_with_logits(labels=true_box_class_2,logits=pred_box_class_2)
+        loss_class_3 = tf.nn.softmax_cross_entropy_with_logits(labels=true_box_class_3,logits=pred_box_class_3)
+
+        loss_class = tf.add_n([loss_class_1,loss_class_2,loss_class_3]) # total class loss TODO:这里还要改，1，2，3不能级别一样，不能同时训练
+        loss_class = tf.reduce_sum(loss_class * class_mask) / (nb_class_box + 1e-6)# TODO:待细看
         
         loss = tf.cond(tf.less(seen, self.warmup_batches+1), 
                       lambda: loss_xy + loss_wh + loss_conf + loss_class + 10,
@@ -241,14 +255,17 @@ class YOLO(object):
             
             current_recall = nb_pred_box/(nb_true_box + 1e-6)
             total_recall = tf.assign_add(total_recall, current_recall) 
-
-            loss = tf.Print(loss, [loss_xy], message='Loss XY \t', summarize=1000)
-            loss = tf.Print(loss, [loss_wh], message='Loss WH \t', summarize=1000)
-            loss = tf.Print(loss, [loss_conf], message='Loss Conf \t', summarize=1000)
-            loss = tf.Print(loss, [loss_class], message='Loss Class \t', summarize=1000)
-            loss = tf.Print(loss, [loss], message='Total Loss \t', summarize=1000)
-            loss = tf.Print(loss, [current_recall], message='Current Recall \t', summarize=1000)
-            loss = tf.Print(loss, [total_recall/seen], message='Average Recall \t', summarize=1000)
+            summarize_for_print = 1000
+            # loss = tf.Print(loss, [true_box_class], message='true box class \t', summarize=summarize_for_print)
+            # loss = tf.Print(loss, [class_mask], message='class mask \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [loss_xy], message='Loss XY \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [loss_xy], message='Loss XY \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [loss_wh], message='Loss WH \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [loss_conf], message='Loss Conf \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [loss_class], message='Loss Class \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [loss], message='Total Loss \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [current_recall], message='Current Recall \t', summarize=summarize_for_print)
+            loss = tf.Print(loss, [total_recall/seen], message='Average Recall \t', summarize=summarize_for_print)
         
         return loss
 
@@ -411,7 +428,7 @@ class YOLO(object):
 
             # make the boxes and the labels
             pred_boxes  = self.predict(aug_image)
-            print('predicted boxes:',pred_boxes)
+            # print('predicted boxes:',pred_boxes)
             score = np.array([box.score for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])        
             
@@ -526,6 +543,6 @@ class YOLO(object):
         dummy_array = np.zeros((1,1,1,1,self.max_box_per_image,4))
 
         netout = self.model.predict([input_image, dummy_array])[0]
-        boxes  = decode_netout(netout, self.anchors, self.nb_class)
+        boxes  = decode_netout(netout, self.anchors, self.nb_class)# TODO：重写decode_netout,按新规则来
 
         return boxes

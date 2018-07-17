@@ -193,12 +193,12 @@ class BatchGenerator_for_USTB(Sequence):
                                 max_iou     = iou
 
                         # assign ground truth x, y, w, h, confidence and class probs to y_batch
-                        print('before:',y_batch[instance_count, grid_y, grid_x, best_anchor])
+                        # print('before:',y_batch[instance_count, grid_y, grid_x, best_anchor])
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 0:4] = box
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 4  ] = 1.
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 5:] = \
                             (lambda x:[int(y) for y in x])(class_map[obj['name']])# new
-                        print('after:',y_batch[instance_count, grid_y, grid_x, best_anchor])
+                        # print('after:',y_batch[instance_count, grid_y, grid_x, best_anchor])
                         # assign the true box to b_batch
                         b_batch[instance_count, 0, 0, 0, true_box_index] = box
 
