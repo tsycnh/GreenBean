@@ -14,6 +14,9 @@ class BoundBox:
         
         self.c     = c
         self.classes = classes
+        self.classes_1 = np.array([0,0,0])
+        self.classes_2 = np.array([0,0,0])
+        self.classes_3 = np.array([0,0,0])
 
         self.label = -1
         self.score = -1
@@ -29,7 +32,12 @@ class BoundBox:
             self.score = self.classes[self.get_label()]
             
         return self.score
-
+    def equal_to(self,BoundBox):
+        if  self.xmin == BoundBox.xmin and \
+            self.ymin == BoundBox.ymin and \
+            self.xmax == BoundBox.xmax and \
+            self.ymax == BoundBox.ymax:
+            return True
 class WeightReader:
     def __init__(self, weight_file):
         self.offset = 4
@@ -131,56 +139,98 @@ def decode_netout_v2(netout, anchors, nb_class, obj_threshold=0.3, nms_threshold
     # yolo-x用的解码
     grid_h, grid_w, nb_box = netout.shape[:3]
 
-    boxes = []
-    #print('before:',netout[0][0][0])
+    print('before:',netout[0][0][0])
     # decode the output by the network
-    netout[..., 4]  = _sigmoid(netout[..., 4])
-    #print('1:',netout[0][0][0])
-    netout[..., 5:] = netout[..., 4][..., np.newaxis] * _softmax(netout[..., 5:])
-    #print('2:',netout[0][0][0])
-    netout[..., 5:] *= netout[..., 5:] > obj_threshold
-    #print('after:',netout[0][0][0])
+    # [...,4] 直接对数据在最后一维的方向上进行操作
+    netout[..., 4]  = _sigmoid(netout[..., 4])# 映射confidence至0～1
+    print('1:',netout[0][0][0])
+    # 为什么这里要a乘以b呢？因为只有a很大的时候，即confidence很大的时候，b（classes）才有意义。相当于一个权重
+    a = netout[..., 4][..., np.newaxis]# 13*13*5*1 增加一维，每一个数字都放在一个小盒子里
+    b1 = _softmax(netout[..., 5:8])
+    b2 = _softmax(netout[..., 8:11])
+    b3 = _softmax(netout[..., 11:14])
+    netout[..., 5:8] =  a*b1 #@@
+    netout[..., 8:11] =  a*b2 #@@
+    netout[..., 11:14] =  a*b3 #@@
+    print('2:',netout[0][0][0])
+    netout[..., 5:] *= netout[..., 5:] > obj_threshold#筛掉较差的结果
+    print('after:',netout[0][0][0])
+    # end预处理，所有class都已经处理成非0即1
+    def extract_bbox_from_netout(netout, start, end):
+        boxes = []
+        for row in range(grid_h):
+            for col in range(grid_w):
+                for b in range(nb_box):
+                    # from 4th element onwards are confidence and class classes
+                    classes = netout[row, col, b, start:end]  # [0,0,1]
 
-    for row in range(grid_h):
-        for col in range(grid_w):
-            for b in range(nb_box):
-                # from 4th element onwards are confidence and class classes
-                classes = netout[row,col,b,5:]
+                    if np.sum(classes) > 0:  # if 有class
+                        # first 4 elements are x, y, w, and h
+                        x, y, w, h = netout[row, col, b, :4]
 
-                if np.sum(classes) > 0:
-                    # first 4 elements are x, y, w, and h
-                    x, y, w, h = netout[row,col,b,:4]
+                        x = (col + _sigmoid(x)) / grid_w  # center position, unit: image width
+                        y = (row + _sigmoid(y)) / grid_h  # center position, unit: image height
+                        w = anchors[2 * b + 0] * np.exp(w) / grid_w  # unit: image width
+                        h = anchors[2 * b + 1] * np.exp(h) / grid_h  # unit: image height
+                        confidence = netout[row, col, b, 4]
 
-                    x = (col + _sigmoid(x)) / grid_w # center position, unit: image width
-                    y = (row + _sigmoid(y)) / grid_h # center position, unit: image height
-                    w = anchors[2 * b + 0] * np.exp(w) / grid_w # unit: image width
-                    h = anchors[2 * b + 1] * np.exp(h) / grid_h # unit: image height
-                    confidence = netout[row,col,b,4]
+                        box = BoundBox(x - w / 2, y - h / 2, x + w / 2, y + h / 2, confidence, classes)
 
-                    box = BoundBox(x-w/2, y-h/2, x+w/2, y+h/2, confidence, classes)
+                        boxes.append(box)
 
-                    boxes.append(box)
+        # suppress non-maximal boxes
+        for c in range(3):# 按照三个类别分别进行非极大抑制
+            sorted_indices = list(reversed(np.argsort([box.classes[c] for box in boxes])))
 
-    # suppress non-maximal boxes
-    for c in range(nb_class):
-        sorted_indices = list(reversed(np.argsort([box.classes[c] for box in boxes])))
+            for i in range(len(sorted_indices)):
+                index_i = sorted_indices[i]
 
-        for i in range(len(sorted_indices)):
-            index_i = sorted_indices[i]
+                if boxes[index_i].classes[c] == 0:# 判断当前class是否是第c类
+                    continue
+                else:
+                    for j in range(i + 1, len(sorted_indices)):
+                        index_j = sorted_indices[j]
 
-            if boxes[index_i].classes[c] == 0:
-                continue
-            else:
-                for j in range(i+1, len(sorted_indices)):
-                    index_j = sorted_indices[j]
+                        if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_threshold:
+                            boxes[index_j].classes[c] = 0
 
-                    if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_threshold:
-                        boxes[index_j].classes[c] = 0
+        # remove the boxes which are less likely than a obj_threshold
+        boxes = [box for box in boxes if box.get_score() > obj_threshold]
+        return boxes
+    cls1_boxes = extract_bbox_from_netout(netout,5,8)
+    cls2_boxes = extract_bbox_from_netout(netout,8,11)
+    cls3_boxes = extract_bbox_from_netout(netout,11,14)
+    # merge boxes
+    cls2_tmp = []
+    for cls1_box in cls1_boxes:
+        for cls2_box in cls2_boxes:
+            if cls1_box.equal_to(cls2_box):
+                cls2_tmp.append(cls2_box)
+    cls2_boxes = cls2_tmp
+    cls3_tmp = []
+    for cls2_box in cls2_boxes:
+        for cls3_box in cls3_boxes:
+            if cls2_box.equal_to(cls3_box):
+                cls3_tmp.append(cls3_box)
+    cls3_boxes = cls3_tmp
+    cls_merge_boxes=[]
+    for cls1_box in cls1_boxes:
+        cls1_box.classes_1 = cls1_box.classes
+        for cls2_box in cls2_boxes:
+            if cls1_box.equal_to(cls2_box):
+                cls1_box.classes_2 = cls2_box.classes
+                break
+        cls_merge_boxes.append(cls1_box)
+    cls_merge2 = []
+    for cls_m_box in cls_merge_boxes:
+        for cls3_box in cls3_boxes:
+            if cls_m_box.equal_to(cls3_box):
+                cls_m_box.classes_3 = cls3_box.classes
+                break
+        cls_merge2.append(cls_m_box)
+    return cls_merge2
 
-    # remove the boxes which are less likely than a obj_threshold
-    boxes = [box for box in boxes if box.get_score() > obj_threshold]
 
-    return boxes
 
 def compute_overlap(a, b):
     """
