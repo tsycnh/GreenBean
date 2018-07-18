@@ -168,7 +168,6 @@ class BatchGenerator_for_USTB(Sequence):
                     grid_y = int(np.floor(center_y))
 
                     if grid_x < self.config['GRID_W'] and grid_y < self.config['GRID_H']:
-                        obj_indx  = self.config['LABELS'].index(obj['name'])
 
                         center_w = (obj['xmax'] - obj['xmin']) / (float(self.config['IMAGE_W']) / self.config['GRID_W']) # unit: grid cell
                         center_h = (obj['ymax'] - obj['ymin']) / (float(self.config['IMAGE_H']) / self.config['GRID_H']) # unit: grid cell

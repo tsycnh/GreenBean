@@ -21,7 +21,8 @@ class YOLO(object):
                        input_size, 
                        labels, 
                        max_box_per_image,
-                       anchors):
+                       anchors,
+                        class_map):
 
         self.input_size = input_size
         
@@ -31,7 +32,7 @@ class YOLO(object):
         # self.class_wt = np.ones(self.nb_class, dtype='float32')#origin
         self.class_wt = np.ones(9, dtype='float32')# new
         self.anchors  = anchors
-
+        self.class_map = class_map
         self.max_box_per_image = max_box_per_image
 
         ##########################
@@ -429,108 +430,116 @@ class YOLO(object):
             # make the boxes and the labels
             pred_boxes  = self.predict(aug_image)
             # print('predicted boxes:',pred_boxes)
-            score = np.array([box.score for box in pred_boxes])
-            pred_labels = np.array([box.label for box in pred_boxes])        
-            
-            if len(pred_boxes) > 0:
-                pred_boxes = np.array([[box.xmin*raw_width, box.ymin*raw_height, box.xmax*raw_width, box.ymax*raw_height, box.score] for box in pred_boxes])
-            else:
-                pred_boxes = np.array([[]])  
+            # TODO:重写从这里开始关于pred_boxes的解析
+
+            decoded_boxes = self.decode_bbox_label(pred_boxes,raw_width=raw_width,raw_height=raw_height)
+
+
+
+            # score = np.array([box.score for box in pred_boxes])
+            # pred_labels = np.array([box.label for box in pred_boxes])
+            #
+            # if len(pred_boxes) > 0:
+            #     pred_boxes = np.array([[box.xmin*raw_width, box.ymin*raw_height, box.xmax*raw_width, box.ymax*raw_height, box.score] for box in pred_boxes])
+            # else:
+            #     pred_boxes = np.array([[]])
             
             # sort the boxes and the labels according to scores
-            score_sort = np.argsort(-score)
-            pred_labels = pred_labels[score_sort]
-            pred_boxes  = pred_boxes[score_sort]
+            # score_sort = np.argsort(-score)
+            # pred_labels = pred_labels[score_sort]
+            # pred_boxes  = pred_boxes[score_sort]
             # -- draw detection results --
             if save_path != None:
                 dts = []
                 labels = []
                 gts = []
-                for k,pred_box in enumerate(pred_boxes):
-                    dt = [int(pred_box[0]),int(pred_box[1]),int(pred_box[2]),int(pred_box[3]),
-                          round(pred_box[4],2),self.labels[pred_labels[k]]]
-                    dts.append(dt)
-                for l,gt_box in enumerate(aug_annotation.bounding_boxes):
-                    gts.append([gt_box.x1,gt_box.y1,gt_box.x2,gt_box.y2,self.labels[aug_class_id[l]]])
+                if len(decoded_boxes)>0:
+                    for k,pred_box in enumerate(decoded_boxes):
+                        dt = [int(pred_box[0]),int(pred_box[1]),int(pred_box[2]),int(pred_box[3]),
+                              round(pred_box[4],2),pred_box[5]]
+                        dts.append(dt)
+                    for l,gt_box in enumerate(aug_annotation.bounding_boxes):
+                        gts.append([gt_box.x1,gt_box.y1,gt_box.x2,gt_box.y2,self.labels[aug_class_id[l]]])
 
-                result_img = draw_detections(bg=aug_image,detections=dts,gt=gts,hide_gt=True,hide_confidence=True)
+                    result_img = draw_detections(bg=aug_image,detections=dts,gt=gts,hide_gt=True,hide_confidence=True)
+                else:
+                    result_img = aug_image
                 cv2.imwrite(save_path+'/%d.jpg'%i,result_img,[int(cv2.IMWRITE_JPEG_QUALITY), 100])
             # ----------------------------
-            # copy detections to all_detections
-            for label in range(generator.num_classes()):
-                all_detections[i][label] = pred_boxes[pred_labels == label, :]
-                
-            # annotations = generator.load_annotation(i)
-            
-            # copy detections to all_annotations
-            for label in range(generator.num_classes()):
-                all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
+            # # copy detections to all_detections
+            # for label in range(generator.num_classes()):
+            #     all_detections[i][label] = pred_boxes[pred_labels == label, :]
+            #
+            # # annotations = generator.load_annotation(i)
+            #
+            # # copy detections to all_annotations
+            # for label in range(generator.num_classes()):
+            #     all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
 
         end_time = time.time()
         print("elapsed time: ",start_time-end_time)
         print('total images: ',generator.size())
 
-        # compute mAP by comparing all detections and all annotations
-        average_precisions = {}
-        
-        for label in range(generator.num_classes()):
-            false_positives = np.zeros((0,))
-            true_positives  = np.zeros((0,))
-            scores          = np.zeros((0,))
-            num_annotations = 0.0
-
-            for i in range(generator.size()):
-                detections           = all_detections[i][label]
-                annotations          = all_annotations[i][label]
-                num_annotations     += annotations.shape[0]
-                detected_annotations = []
-
-                for d in detections:
-                    scores = np.append(scores, d[4])
-
-                    if annotations.shape[0] == 0:
-                        false_positives = np.append(false_positives, 1)
-                        true_positives  = np.append(true_positives, 0)
-                        continue
-
-                    overlaps            = compute_overlap(np.expand_dims(d, axis=0), annotations)
-                    assigned_annotation = np.argmax(overlaps, axis=1)
-                    max_overlap         = overlaps[0, assigned_annotation]
-
-                    if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:
-                        false_positives = np.append(false_positives, 0)
-                        true_positives  = np.append(true_positives, 1)
-                        detected_annotations.append(assigned_annotation)
-                    else:
-                        false_positives = np.append(false_positives, 1)
-                        true_positives  = np.append(true_positives, 0)
-
-            # no annotations -> AP for this class is 0 (is this correct?)
-            if num_annotations == 0:
-                average_precisions[label] = 0
-                continue
-
-            # sort by score
-            indices         = np.argsort(-scores)
-            false_positives = false_positives[indices]
-            true_positives  = true_positives[indices]
-
-            # compute false positives and true positives
-            false_positives = np.cumsum(false_positives)
-            true_positives  = np.cumsum(true_positives)
-
-            # compute recall and precision
-            recall    = true_positives / num_annotations
-            precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
-
-            # compute average precision
-            average_precision  = compute_ap(recall, precision)  
-            average_precisions[label] = average_precision
+        # # compute mAP by comparing all detections and all annotations
+        # average_precisions = {}
+        #
+        # for label in range(generator.num_classes()):
+        #     false_positives = np.zeros((0,))
+        #     true_positives  = np.zeros((0,))
+        #     scores          = np.zeros((0,))
+        #     num_annotations = 0.0
+        #
+        #     for i in range(generator.size()):
+        #         detections           = all_detections[i][label]
+        #         annotations          = all_annotations[i][label]
+        #         num_annotations     += annotations.shape[0]
+        #         detected_annotations = []
+        #
+        #         for d in detections:
+        #             scores = np.append(scores, d[4])
+        #
+        #             if annotations.shape[0] == 0:
+        #                 false_positives = np.append(false_positives, 1)
+        #                 true_positives  = np.append(true_positives, 0)
+        #                 continue
+        #
+        #             overlaps            = compute_overlap(np.expand_dims(d, axis=0), annotations)
+        #             assigned_annotation = np.argmax(overlaps, axis=1)
+        #             max_overlap         = overlaps[0, assigned_annotation]
+        #
+        #             if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:
+        #                 false_positives = np.append(false_positives, 0)
+        #                 true_positives  = np.append(true_positives, 1)
+        #                 detected_annotations.append(assigned_annotation)
+        #             else:
+        #                 false_positives = np.append(false_positives, 1)
+        #                 true_positives  = np.append(true_positives, 0)
+        #
+        #     # no annotations -> AP for this class is 0 (is this correct?)
+        #     if num_annotations == 0:
+        #         average_precisions[label] = 0
+        #         continue
+        #
+        #     # sort by score
+        #     indices         = np.argsort(-scores)
+        #     false_positives = false_positives[indices]
+        #     true_positives  = true_positives[indices]
+        #
+        #     # compute false positives and true positives
+        #     false_positives = np.cumsum(false_positives)
+        #     true_positives  = np.cumsum(true_positives)
+        #
+        #     # compute recall and precision
+        #     recall    = true_positives / num_annotations
+        #     precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
+        #
+        #     # compute average precision
+        #     average_precision  = compute_ap(recall, precision)
+        #     average_precisions[label] = average_precision
 
         return average_precisions    
 
-    # 现在单看predict函数，输入一张图，强制拉伸为416*416，检测输出bbox
-    # 更改：将强制拉伸解除。意味着输入必须是合规大小的图像
+
     def predict(self, image):
         image_h, image_w, _ = image.shape
         if image_h != self.input_size or image_w != self.input_size:
@@ -543,6 +552,43 @@ class YOLO(object):
         dummy_array = np.zeros((1,1,1,1,self.max_box_per_image,4))
 
         netout = self.model.predict([input_image, dummy_array])[0]
-        boxes  = decode_netout(netout, self.anchors, self.nb_class)# TODO：重写decode_netout,按新规则来
-
+        boxes  = decode_netout(netout, self.anchors, self.nb_class)
         return boxes
+
+    def decode_bbox_label(self,boxes,raw_width,raw_height):
+        boxes_for_shown=[]
+        if len(boxes) <=0:
+            return []
+        for box in boxes:
+            label_for_shown = ''
+            cls = ""
+
+            for item in list(box.classes_1):
+                cls += str(item)
+            if cls in self.class_map['class1']:
+                label_for_shown += self.class_map['class1'][cls] + ','
+            else:
+                label_for_shown += 'x,'
+
+            for item in list(box.classes_2):
+                cls += str(item)
+            if cls in self.class_map['class2']:
+                label_for_shown += self.class_map['class2'][cls] + ','
+            else:
+                label_for_shown += 'x,'
+
+            for item in list(box.classes_3):
+                cls += str(item)
+            if cls in self.class_map['class3']:
+                label_for_shown += self.class_map['class3'][cls]
+            else:
+                label_for_shown += "x"
+
+            box_for_shown = [box.xmin * raw_width,
+             box.ymin * raw_height,
+             box.xmax * raw_width,
+             box.ymax * raw_height,
+             box.score,
+             label_for_shown]
+            boxes_for_shown.append(box_for_shown)
+        return boxes_for_shown

@@ -1,11 +1,52 @@
 {
     "model" : {
-        "backend":              "Full Yolo",
-        "input_size":           416,
-        "anchors":              [1.60,11.75, 2.38,2.92, 4.19,6.16, 8.34,8.40, 12.13,2.08],
-        "max_box_per_image":    8,
-        "labels":               ["WaterDrop","Upwarping","HorizontalCrack","Scale","RollMark","WaterStain","VerticalCrack"],
+        "backend": "Full Yolo",
+        "input_size": 416,
+        "anchors": [
+            1.60,
+            11.75,
+            2.38,
+            2.92,
+            4.19,
+            6.16,
+            8.34,
+            8.40,
+            12.13,
+            2.08
+        ],
+        "max_box_per_image": 8,
+        "labels": [
+            "WaterDrop",
+            "Upwarping",
+            "HorizontalCrack",
+            "Scale",
+            "RollMark",
+            "WaterStain",
+            "VerticalCrack"
+        ],
+            "class_map": {
+      "class1": {
+        "001":"Line",
+        "010":"Area" ,
+        "100":"Spot"
+      },
+      "class2": {
+        "001001":"VerticalLine",
+        "001010":"HorizontalCrack",
 
+        "010001":"Scale" ,
+        "010010":"Upwarping" ,
+
+        "100001":"WaterDrop" ,
+        "100010":"RollMark"
+      },
+      "class3": {
+        "001001001":"WaterStain" ,
+        "001001010":"VerticalCrack"
+      }
+    }
+
+    },
     "train": {
         "train_image_folder":   "D:/TSY/USTBdata/data/train/images/",
         "train_annot_folder":   "D:/TSY/USTBdata/data/train/annotations/",

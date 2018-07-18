@@ -58,9 +58,10 @@ def _main_(args):
 
     yolo = YOLO(backend             = config['model']['backend'],
                 input_size          = config['model']['input_size'], 
-                labels              = config['model']['labels'], 
+                labels              = config['model']['labels'],
                 max_box_per_image   = config['model']['max_box_per_image'],
-                anchors             = config['model']['anchors'])
+                anchors             = config['model']['anchors'],
+                class_map           = config['model']['class_map'])
 
     ###############################
     #   Load the pretrained weights (if any) 
@@ -69,7 +70,7 @@ def _main_(args):
     if os.path.exists(config['train']['pretrained_weights']):
         print("Loading pre-trained weights in", config['train']['pretrained_weights'])
         yolo.load_weights(config['train']['pretrained_weights'])
-
+    # yolo.model.save_weights('./full_yolox_USTB.h5')
     ###############################
     #   Start the training process 
     ###############################
