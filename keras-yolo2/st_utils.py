@@ -365,7 +365,7 @@ def draw_detections(bg, detections, gt,hide_gt=False,hide_confidence=False):
             confidence = ''
         else:
             confidence = str(rect[4])
-        cv2.putText(bg,rect[5]+confidence+' ',(rect[0],rect[1]+12),cv2.FONT_HERSHEY_SIMPLEX,1,pred_color)
+        cv2.putText(bg,rect[5]+confidence+' ',(rect[0]+2,rect[1]+20),cv2.FONT_HERSHEY_SIMPLEX,0.7,pred_color)
     if not hide_gt:
         for rect in gt:
             cv2.rectangle(bg,pt1=(rect[0],rect[1]),pt2=(rect[2],rect[3]),color=(0,255,0))
