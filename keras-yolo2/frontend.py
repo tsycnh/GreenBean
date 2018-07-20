@@ -458,12 +458,12 @@ class YOLO(object):
                         dt = [int(pred_box[0]),int(pred_box[1]),int(pred_box[2]),int(pred_box[3]),
                               round(pred_box[4],2),pred_box[5]]
                         dts.append(dt)
+                if len(aug_annotation.bounding_boxes)>0:
                     for l,gt_box in enumerate(aug_annotation.bounding_boxes):
                         gts.append([gt_box.x1,gt_box.y1,gt_box.x2,gt_box.y2,self.labels[aug_class_id[l]]])
 
-                    result_img = draw_detections(bg=aug_image,detections=dts,gt=gts,hide_gt=True,hide_confidence=True)
-                else:
-                    result_img = aug_image
+                result_img = draw_detections(bg=aug_image, detections=dts, gt=gts, hide_gt=True, hide_confidence=True)
+
                 cv2.imwrite(save_path+'/%d.jpg'%i,result_img,[int(cv2.IMWRITE_JPEG_QUALITY), 100])
             # ----------------------------
             # # copy detections to all_detections
