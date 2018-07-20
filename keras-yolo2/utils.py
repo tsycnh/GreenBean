@@ -116,20 +116,14 @@ def decode_netout(netout, anchors, nb_class, obj_threshold=0.3, nms_threshold=0.
                     boxes.append(box)
 
     # suppress non-maximal boxes
-    for c in range(nb_class):
-        sorted_indices = list(reversed(np.argsort([box.classes[c] for box in boxes])))
+    sorted_indices = list(reversed(np.argsort([max(box.classes) for box in boxes])))
+    for i in range(len(sorted_indices)):
+        index_i = sorted_indices[i]
+        for j in range(i+1, len(sorted_indices)):
+            index_j = sorted_indices[j]
 
-        for i in range(len(sorted_indices)):
-            index_i = sorted_indices[i]
-            
-            if boxes[index_i].classes[c] == 0: 
-                continue
-            else:
-                for j in range(i+1, len(sorted_indices)):
-                    index_j = sorted_indices[j]
-                    
-                    if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_threshold:
-                        boxes[index_j].classes[c] = 0
+            if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_threshold:
+                boxes[index_j].classes = np.zeros(shape=boxes[index_j].classes.shape)
                         
     # remove the boxes which are less likely than a obj_threshold
     boxes = [box for box in boxes if box.get_score() > obj_threshold]
