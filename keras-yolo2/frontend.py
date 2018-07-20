@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 import os
 import cv2
-from utils import decode_netout, compute_overlap, compute_ap
+from utils import decode_netout_v2, compute_overlap, compute_ap
 from keras.applications.mobilenet import MobileNet
 from keras.layers.merge import concatenate
 from keras.optimizers import SGD, Adam, RMSprop
@@ -107,7 +107,7 @@ class YOLO(object):
         
         coord_mask = tf.zeros(mask_shape)
         conf_mask  = tf.zeros(mask_shape)
-        class_mask = tf.zeros(mask_shape)
+        # class_mask = tf.zeros(mask_shape)
         
         seen = tf.Variable(0.)
         total_recall = tf.Variable(0.)
@@ -163,7 +163,7 @@ class YOLO(object):
         # print('y_true:',y_true)
         # print('y_pred:',y_pred)
         ### adjust class probabilities
-        true_box_class = tf.argmax(y_true[..., 5:], -1)
+        # true_box_class = tf.argmax(y_true[..., 5:], -1)
 
         true_box_class_1 = y_true[..., 5:8]
         true_box_class_2 = y_true[..., 8:11]
@@ -209,7 +209,7 @@ class YOLO(object):
         conf_mask = conf_mask + y_true[..., 4] * self.object_scale
         
         ### class mask: simply the position of the ground truth boxes (the predictors)
-        class_mask = y_true[..., 4] * tf.gather(self.class_wt, true_box_class) * self.class_scale       
+        # class_mask = y_true[..., 4] * tf.gather(self.class_wt, true_box_class) * self.class_scale
         
         """
         Warm-up training
@@ -232,7 +232,7 @@ class YOLO(object):
         """
         nb_coord_box = tf.reduce_sum(tf.to_float(coord_mask > 0.0))
         nb_conf_box  = tf.reduce_sum(tf.to_float(conf_mask  > 0.0))
-        nb_class_box = tf.reduce_sum(tf.to_float(class_mask > 0.0))
+        # nb_class_box = tf.reduce_sum(tf.to_float(class_mask > 0.0))
         
         loss_xy    = tf.reduce_sum(tf.square(true_box_xy-pred_box_xy)     * coord_mask) / (nb_coord_box + 1e-6) / 2.
         loss_wh    = tf.reduce_sum(tf.square(true_box_wh-pred_box_wh)     * coord_mask) / (nb_coord_box + 1e-6) / 2.
@@ -243,9 +243,11 @@ class YOLO(object):
         loss_class_2 = tf.nn.softmax_cross_entropy_with_logits(labels=true_box_class_2,logits=pred_box_class_2)
         loss_class_3 = tf.nn.softmax_cross_entropy_with_logits(labels=true_box_class_3,logits=pred_box_class_3)
 
-        loss_class = tf.add_n([loss_class_1,loss_class_2,loss_class_3]) # total class loss TODO:这里还要改，1，2，3不能级别一样，不能同时训练
-        loss_class = tf.reduce_sum(loss_class * class_mask) / (nb_class_box + 1e-6)# TODO:待细看
-        
+        # loss_class = tf.add_n([loss_class_1,loss_class_2,loss_class_3]) # total class loss TODO:这里还要改，1，2，3不能级别一样，不能同时训练
+        loss_class = tf.add_n([loss_class_1]) # total class loss TODO:这里还要改，1，2，3不能级别一样，不能同时训练
+        # loss_class = tf.reduce_sum(loss_class * class_mask) / (nb_class_box + 1e-6)# TODO:待细看
+        # loss_class = tf.reduce_sum(loss_class * class_mask) / (nb_class_box + 1e-6)# TODO:待细看
+
         loss = tf.cond(tf.less(seen, self.warmup_batches+1), 
                       lambda: loss_xy + loss_wh + loss_conf + loss_class + 10,
                       lambda: loss_xy + loss_wh + loss_conf + loss_class)
@@ -409,6 +411,7 @@ class YOLO(object):
         if save_path != None:
             if os.path.exists(save_path):
                 shutil.rmtree(save_path)
+            time.sleep(1)
             os.mkdir(save_path)
         start_time = time.time()
         # 对验证集里的所有的图像逐一的进行验证
@@ -433,7 +436,7 @@ class YOLO(object):
             # TODO:重写从这里开始关于pred_boxes的解析
 
             decoded_boxes = self.decode_bbox_label(pred_boxes,raw_width=raw_width,raw_height=raw_height)
-
+            print('decoded boxes:',decoded_boxes)
 
 
             # score = np.array([box.score for box in pred_boxes])
@@ -462,8 +465,7 @@ class YOLO(object):
                     for l,gt_box in enumerate(aug_annotation.bounding_boxes):
                         gts.append([gt_box.x1,gt_box.y1,gt_box.x2,gt_box.y2,self.labels[aug_class_id[l]]])
 
-                result_img = draw_detections(bg=aug_image, detections=dts, gt=gts, hide_gt=True, hide_confidence=True)
-
+                result_img = draw_detections(bg=aug_image, detections=dts, gt=gts, hide_gt=False, hide_confidence=False)
                 cv2.imwrite(save_path+'/%d.jpg'%i,result_img,[int(cv2.IMWRITE_JPEG_QUALITY), 100])
             # ----------------------------
             # # copy detections to all_detections
@@ -537,7 +539,7 @@ class YOLO(object):
         #     average_precision  = compute_ap(recall, precision)
         #     average_precisions[label] = average_precision
 
-        return average_precisions    
+        return None #average_precisions
 
 
     def predict(self, image):
@@ -552,7 +554,7 @@ class YOLO(object):
         dummy_array = np.zeros((1,1,1,1,self.max_box_per_image,4))
 
         netout = self.model.predict([input_image, dummy_array])[0]
-        boxes  = decode_netout(netout, self.anchors, self.nb_class)
+        boxes  = decode_netout_v2(netout, self.anchors, self.nb_class)
         return boxes
 
     def decode_bbox_label(self,boxes,raw_width,raw_height):
