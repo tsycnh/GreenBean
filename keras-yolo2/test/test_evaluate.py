@@ -75,7 +75,7 @@ if __name__ == "__main__":
         norm = yolo.feature_extractor.normalize,
         jitter = False)
 
-    average_precisions = yolo.evaluate(valid_generator,save_path='detection_result')
+    average_precisions = yolo.evaluate(valid_generator,save_path='detection_result_20181009')
 
     # print evaluation
     for label, average_precision in average_precisions.items():
