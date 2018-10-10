@@ -19,13 +19,15 @@ import time
 class YOLO(object):
     def __init__(self, backend,
                        input_size, 
-                       labels, 
+                       labels,
+                       struct_labels,
                        max_box_per_image,
                        anchors):
 
         self.input_size = input_size
         
         self.labels   = list(labels)
+        self.struct_labels = struct_labels
         self.nb_class = len(self.labels)
         self.nb_box   = len(anchors)//2
         self.class_wt = np.ones(self.nb_class, dtype='float32')
@@ -63,17 +65,16 @@ class YOLO(object):
         features = self.feature_extractor.extract(input_image)            
 
         # make the object detection layer
-        output = Conv2D(self.nb_box * (4 + 1 + self.nb_class), 
+        output = Conv2D(self.nb_box * (4 + 1 + 5+10),
                         (1,1), strides=(1,1), 
                         padding='same', 
                         name='DetectionLayer', 
                         kernel_initializer='lecun_normal')(features)
-        output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + self.nb_class))(output)
+        output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + 5+10))(output)#新输出
         output = Lambda(lambda args: args[0])([output, self.true_boxes])
 
         self.model = Model([input_image, self.true_boxes], output)
 
-        
         # initialize the weights of the detection layer
         layer = self.model.layers[-4]
         weights = layer.get_weights()
@@ -99,8 +100,9 @@ class YOLO(object):
         
         coord_mask = tf.zeros(mask_shape)
         conf_mask  = tf.zeros(mask_shape)
-        class_mask = tf.zeros(mask_shape)
-        
+        class_mask1 = tf.zeros(mask_shape)
+        class_mask2 = tf.zeros(mask_shape)
+
         seen = tf.Variable(0.)
         total_recall = tf.Variable(0.)
         
@@ -117,8 +119,10 @@ class YOLO(object):
         pred_box_conf = tf.sigmoid(y_pred[..., 4])
         
         ### adjust class probabilities
-        pred_box_class = y_pred[..., 5:]
-        
+        # pred_box_class = y_pred[..., 5:]
+        pred_box_class1 = y_pred[..., 5:10]# level1缺陷
+        pred_box_class2 = y_pred[..., 10:]# level2缺陷
+
         """
         Adjust ground truth
         """
@@ -151,8 +155,10 @@ class YOLO(object):
         true_box_conf = iou_scores * y_true[..., 4]
         
         ### adjust class probabilities
-        true_box_class = tf.argmax(y_true[..., 5:], -1)
-        
+
+        true_box_class1 = tf.argmax(y_true[..., 5:10], -1)
+        true_box_class2 = tf.argmax(y_true[..., 10:], -1)
+
         """
         Determine the masks
         """
@@ -193,8 +199,10 @@ class YOLO(object):
         conf_mask = conf_mask + y_true[..., 4] * self.object_scale
         
         ### class mask: simply the position of the ground truth boxes (the predictors)
-        class_mask = y_true[..., 4] * tf.gather(self.class_wt, true_box_class) * self.class_scale       
-        
+
+        class_mask1 = y_true[..., 4] * tf.gather(self.class_wt, true_box_class1) * self.class_scale
+        class_mask2 = y_true[..., 4] * tf.gather(self.class_wt, true_box_class2) * self.class_scale
+
         """
         Warm-up training
         """
@@ -216,14 +224,22 @@ class YOLO(object):
         """
         nb_coord_box = tf.reduce_sum(tf.to_float(coord_mask > 0.0))
         nb_conf_box  = tf.reduce_sum(tf.to_float(conf_mask  > 0.0))
-        nb_class_box = tf.reduce_sum(tf.to_float(class_mask > 0.0))
-        
+
+        nb_class_box1 = tf.reduce_sum(tf.to_float(class_mask1 > 0.0))
+        nb_class_box2 = tf.reduce_sum(tf.to_float(class_mask2 > 0.0))
+
         loss_xy    = tf.reduce_sum(tf.square(true_box_xy-pred_box_xy)     * coord_mask) / (nb_coord_box + 1e-6) / 2.
         loss_wh    = tf.reduce_sum(tf.square(true_box_wh-pred_box_wh)     * coord_mask) / (nb_coord_box + 1e-6) / 2.
         loss_conf  = tf.reduce_sum(tf.square(true_box_conf-pred_box_conf) * conf_mask)  / (nb_conf_box  + 1e-6) / 2.
-        loss_class = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class, logits=pred_box_class)
-        loss_class = tf.reduce_sum(loss_class * class_mask) / (nb_class_box + 1e-6)
-        
+
+        loss_class1 = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class1, logits=pred_box_class1)
+        loss_class2 = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_box_class2, logits=pred_box_class2)
+
+        loss_class1 = tf.reduce_sum(loss_class1 * class_mask1) / (nb_class_box1 + 1e-6)
+        loss_class2 = tf.reduce_sum(loss_class2 * class_mask2) / (nb_class_box2 + 1e-6)
+
+        # 合并一二级loss
+        loss_class = loss_class1 + loss_class2
         loss = tf.cond(tf.less(seen, self.warmup_batches+1), 
                       lambda: loss_xy + loss_wh + loss_conf + loss_class + 10,
                       lambda: loss_xy + loss_wh + loss_conf + loss_class)
@@ -283,6 +299,7 @@ class YOLO(object):
             'GRID_W'          : self.grid_w,
             'BOX'             : self.nb_box,
             'LABELS'          : self.labels,
+            'STRUCT_LABELS'   : self.struct_labels,
             'CLASS'           : len(self.labels),
             'ANCHORS'         : self.anchors,
             'BATCH_SIZE'      : self.batch_size,

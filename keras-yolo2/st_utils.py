@@ -158,7 +158,8 @@ class BatchGenerator_for_USTB(Sequence):
                     grid_y = int(np.floor(center_y))
 
                     if grid_x < self.config['GRID_W'] and grid_y < self.config['GRID_H']:
-                        obj_indx  = self.config['LABELS'].index(obj['name'])
+                        # 新的结构化的类别标签
+                        struct_index = self.config['STRUCT_LABELS'][obj['name']]
 
                         center_w = (obj['xmax'] - obj['xmin']) / (float(self.config['IMAGE_W']) / self.config['GRID_W']) # unit: grid cell
                         center_h = (obj['ymax'] - obj['ymin']) / (float(self.config['IMAGE_H']) / self.config['GRID_H']) # unit: grid cell
@@ -185,8 +186,6 @@ class BatchGenerator_for_USTB(Sequence):
                         # assign ground truth x, y, w, h, confidence and class probs to y_batch
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 0:4] = box
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 4  ] = 1.
-
-                        struct_index = self.config['STRUCT_LABELS'][obj['name']]
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 5+struct_index[0]] = 1
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 10+struct_index[1]] = 1
 
