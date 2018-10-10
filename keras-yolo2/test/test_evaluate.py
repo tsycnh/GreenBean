@@ -3,7 +3,7 @@
 import argparse
 import os
 import numpy as np
-from preprocessing import parse_annotation
+from preprocessing import parse_annotation,parse_test_annotation
 from frontend import YOLO
 import json
 from st_utils import BatchGenerator_for_USTB,draw_detections
@@ -11,8 +11,9 @@ from st_utils import BatchGenerator_for_USTB,draw_detections
 if __name__ == "__main__":
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    config_path = './config_USTB.json'
+    config_path = './config_USTB_VerticalScratch.json'
     weight_path = './full_yolo_USTB_7种缺陷_实验1.h5'
+    save_path = "detection_result_20181010a"
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
@@ -21,28 +22,28 @@ if __name__ == "__main__":
     #   Parse the annotations
     ###############################
     # parse annotations of the training set
-    train_imgs_with_objs, train_labels_count = parse_annotation(config['train']['train_annot_folder'],
-                                                                config['train']['train_image_folder'],
-                                                                config['model']['labels'])
+    # train_imgs_with_objs, train_labels_count = parse_annotation(config['train']['train_annot_folder'],
+    #                                                             config['train']['train_image_folder'],
+    #                                                             config['model']['labels'])
 
     # parse annotations of the validation set, if any, otherwise split the training set
 
-    valid_imgs_with_objs, valid_labels_count = parse_annotation(config['valid']['valid_annot_folder'],
+    valid_imgs_with_objs, valid_labels_count = parse_test_annotation(config['valid']['valid_annot_folder'],
                                                                 config['valid']['valid_image_folder'],
                                                                 config['model']['labels'])
 
-    if len(config['model']['labels']) > 0:
-        overlap_labels = set(config['model']['labels']).intersection(set(train_labels_count.keys()))
-
-        print('Seen labels:\t', train_labels_count)
-        print('Given labels:\t', config['model']['labels'])
-        print('Overlap labels:\t', overlap_labels)
-
-        if len(overlap_labels) < len(config['model']['labels']):
-            print('Some labels have no annotations! Please revise the list of labels in the config.json file!')
-    else:
-        print('No labels are provided. Train on all seen labels.')
-        config['model']['labels'] = train_labels_count.keys()
+    # if len(config['model']['labels']) > 0:
+    #     overlap_labels = set(config['model']['labels']).intersection(set(train_labels_count.keys()))
+    #
+    #     print('Seen labels:\t', train_labels_count)
+    #     print('Given labels:\t', config['model']['labels'])
+    #     print('Overlap labels:\t', overlap_labels)
+    #
+    #     if len(overlap_labels) < len(config['model']['labels']):
+    #         print('Some labels have no annotations! Please revise the list of labels in the config.json file!')
+    # else:
+    #     print('No labels are provided. Train on all seen labels.')
+    #     config['model']['labels'] = train_labels_count.keys()
 
     ###############################
     #   Construct the model
@@ -75,7 +76,7 @@ if __name__ == "__main__":
         norm = yolo.feature_extractor.normalize,
         jitter = False)
 
-    average_precisions = yolo.evaluate(valid_generator,save_path='detection_result_20181009')
+    average_precisions = yolo.evaluate(valid_generator,save_path=save_path)
 
     # print evaluation
     for label, average_precision in average_precisions.items():

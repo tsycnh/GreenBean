@@ -241,7 +241,10 @@ class BatchGenerator_for_USTB(Sequence):
         aug_imgs, aug_bbses, aug_clses = self.aug_image(i,i+1)
         class_ids = []
         for obj in aug_clses[0]:
-            class_ids.append(self.config['LABELS'].index(obj))
+            if obj not in self.config['LABELS']:
+                class_ids.append(-1)
+            else:
+                class_ids.append(self.config['LABELS'].index(obj))
         return {
             'origin':{
                 'image':origin_image,
