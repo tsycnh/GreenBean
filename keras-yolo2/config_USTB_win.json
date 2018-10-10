@@ -31,8 +31,8 @@
         "no_object_scale":      1.0,
         "coord_scale":          1.0,
         "class_scale":          1.0,
-
-        "saved_weights_name":   "full_yolo_USTB_wordtree.h5",
+        "log_dir":              "./logs/20181010a",
+        "saved_weights_name":   "full_yolo_USTB_wordtree",
         "debug":                false
     },
 

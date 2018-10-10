@@ -61,7 +61,8 @@ def _main_(args):
                 labels              = config['model']['labels'],
                 struct_labels       = config['model']['struct_labels'],
                 max_box_per_image   = config['model']['max_box_per_image'],
-                anchors             = config['model']['anchors'])
+                anchors             = config['model']['anchors'],
+                config = config)
 
     ###############################
     #   Load the pretrained weights (if any) 

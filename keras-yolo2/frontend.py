@@ -22,8 +22,9 @@ class YOLO(object):
                        labels,
                        struct_labels,
                        max_box_per_image,
-                       anchors):
-
+                       anchors,
+                        config):
+        self.config = config
         self.input_size = input_size
         
         self.labels   = list(labels)
@@ -329,18 +330,20 @@ class YOLO(object):
         # Make a few callbacks
         ############################################
 
+
         early_stop = EarlyStopping(monitor='val_loss', 
                            min_delta=0.001, 
                            patience=10,
                            mode='min', 
                            verbose=1)
-        checkpoint = ModelCheckpoint(saved_weights_name, 
+        filepath = "./tmp/"+saved_weights_name+"ckpt_{epoch:02d}_{val_acc:.2f}.h5"
+        checkpoint = ModelCheckpoint(filepath,
                                      monitor='val_loss', 
                                      verbose=1, 
-                                     save_best_only=True, 
+                                     save_best_only=False,
                                      mode='min', 
                                      period=1)
-        tensorboard = TensorBoard(log_dir='./logs/',
+        tensorboard = TensorBoard(log_dir=self.config['log_dir'],
                                   histogram_freq=0, 
                                   #write_batch_performance=True,
                                   write_graph=False,
