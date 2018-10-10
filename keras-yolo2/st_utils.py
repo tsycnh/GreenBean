@@ -124,7 +124,8 @@ class BatchGenerator_for_USTB(Sequence):
 
         x_batch = np.zeros((r_bound - l_bound, self.config['IMAGE_H'], self.config['IMAGE_W'], 3))                         # input images
         b_batch = np.zeros((r_bound - l_bound, 1     , 1     , 1    ,  self.config['TRUE_BOX_BUFFER'], 4))   # list of self.config['TRUE_self.config['BOX']_BUFFER'] GT boxes
-        y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+len(self.config['LABELS'])))                # desired network output
+        # y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+len(self.config['LABELS'])))                # desired network output
+        y_batch = np.zeros((r_bound - l_bound, self.config['GRID_H'],  self.config['GRID_W'], self.config['BOX'], 4+1+5+10))# 新的输出大小，5+10类别，原始数据集只有7种类别，多出来的3中作为留空
 
         aug_imgs,aug_bbses,aug_clses = self.aug_image(l_bound,r_bound)
 
@@ -184,7 +185,10 @@ class BatchGenerator_for_USTB(Sequence):
                         # assign ground truth x, y, w, h, confidence and class probs to y_batch
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 0:4] = box
                         y_batch[instance_count, grid_y, grid_x, best_anchor, 4  ] = 1.
-                        y_batch[instance_count, grid_y, grid_x, best_anchor, 5+obj_indx] = 1
+
+                        struct_index = self.config['STRUCT_LABELS'][obj['name']]
+                        y_batch[instance_count, grid_y, grid_x, best_anchor, 5+struct_index[0]] = 1
+                        y_batch[instance_count, grid_y, grid_x, best_anchor, 10+struct_index[1]] = 1
 
                         # assign the true box to b_batch
                         b_batch[instance_count, 0, 0, 0, true_box_index] = box

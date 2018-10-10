@@ -19,10 +19,12 @@ if __name__ == "__main__":
                 'GRID_W'          : 13,
                 'BOX'             : len(config['model']['anchors'])//2,#取整运算
                 'LABELS'          : config['model']['labels'],
+                'STRUCT_LABELS'   : config['model']['struct_labels'],
                 'CLASS'           : len(config['model']['labels']),
                 'ANCHORS'         : config['model']['anchors'],
                 'BATCH_SIZE'      : config['train']['batch_size'],
                 'TRUE_BOX_BUFFER' : config['model']['max_box_per_image'],
+
             }
     generator = BatchGenerator_for_USTB(images=train_imgs,config=generator_config,shuffle=False)
 
@@ -34,14 +36,12 @@ if __name__ == "__main__":
     # print(train_imgs,train_labels)
         generator.debug = False
         d = generator.__getitem__(0)
-        # image = d[0][0][2].astype('uint8')
-        # cv2.imshow('output',image)
+        image = d[0][0][2].astype('uint8')
+        cv2.imshow('output',image)
 
         #绘制bbox需要先project on 已padding的黑边图像，然后再on到原图
-    # test load image
-
-    # test_getitem()
-    test_load_image()
+    test_getitem()
+    # test_load_image()
 
     cv2.waitKey(0)
 
