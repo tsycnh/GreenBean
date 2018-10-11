@@ -336,14 +336,14 @@ class YOLO(object):
                            patience=10,
                            mode='min', 
                            verbose=1)
-        filepath = "./tmp/"+saved_weights_name+"ckpt_{epoch:02d}_{val_acc:.2f}.h5"
+        filepath = "./tmp/"+saved_weights_name+"_ckpt_{epoch:02d}_{val_loss:.2f}.h5"
         checkpoint = ModelCheckpoint(filepath,
                                      monitor='val_loss', 
                                      verbose=1, 
                                      save_best_only=False,
                                      mode='min', 
                                      period=1)
-        tensorboard = TensorBoard(log_dir=self.config['log_dir'],
+        tensorboard = TensorBoard(log_dir=self.config['train']['log_dir'],
                                   histogram_freq=0, 
                                   #write_batch_performance=True,
                                   write_graph=False,
