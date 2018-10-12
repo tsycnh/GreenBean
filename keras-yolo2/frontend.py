@@ -425,6 +425,7 @@ class YOLO(object):
             # make the boxes and the labels
             pred_boxes  = self.predict(aug_image)
             print('predicted boxes:',pred_boxes)
+            # TODO:改！！！！
             score = np.array([box.score for box in pred_boxes])
             pred_labels = np.array([box.label for box in pred_boxes])        
             

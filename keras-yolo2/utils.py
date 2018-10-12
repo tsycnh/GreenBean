@@ -6,7 +6,7 @@ import copy
 import cv2
 
 class BoundBox:
-    def __init__(self, xmin, ymin, xmax, ymax, c = None, classes = None):
+    def __init__(self, xmin, ymin, xmax, ymax, c = None, classes = None,class1=None,class2=None):
         self.xmin = xmin
         self.ymin = ymin
         self.xmax = xmax
@@ -15,20 +15,33 @@ class BoundBox:
         self.c     = c
         self.classes = classes
 
+        self.class1 = class1
+        self.class2 = class2
+
         self.label = -1
+        self.label1 = -1
+        self.label2 = -1
         self.score = -1
+        self.score1 = -1
+        self.score2 = -1
 
     def get_label(self):
-        if self.label == -1:
-            self.label = np.argmax(self.classes)
+        if self.label1 == -1:
+            self.label1 = np.argmax(self.class1)
+
+        if self.label2 == -1:
+            self.label2 = np.argmax(self.class2)
+
         
-        return self.label
+        return self.label1,self.label2
     
     def get_score(self):
         if self.score == -1:
-            self.score = self.classes[self.get_label()]
-            
-        return self.score
+            l1,l2 = self.get_label()
+            self.score1 = self.class1[l1]
+            self.score2 = self.class2[l2]
+
+        return self.score1,self.score2
 
 class WeightReader:
     def __init__(self, weight_file):
@@ -82,7 +95,8 @@ def decode_netout(netout, anchors, nb_class, obj_threshold=0.3, nms_threshold=0.
     # decode the output by the network
     netout[..., 4]  = _sigmoid(netout[..., 4])
     #print('1:',netout[0][0][0])
-    netout[..., 5:] = netout[..., 4][..., np.newaxis] * _softmax(netout[..., 5:])
+    netout[..., 5:10] = netout[..., 4][..., np.newaxis] * _softmax(netout[..., 5:10])# Level1
+    netout[..., 10:] = netout[..., 4][..., np.newaxis] * _softmax(netout[..., 10:])# Level2
     #print('2:',netout[0][0][0])
     netout[..., 5:] *= netout[..., 5:] > obj_threshold
     #print('after:',netout[0][0][0])
@@ -91,9 +105,11 @@ def decode_netout(netout, anchors, nb_class, obj_threshold=0.3, nms_threshold=0.
         for col in range(grid_w):
             for b in range(nb_box):
                 # from 4th element onwards are confidence and class classes
-                classes = netout[row,col,b,5:]
-                
-                if np.sum(classes) > 0:
+                # classes = netout[row,col,b,5:]
+                classes1 = netout[row,col,b,5:10]
+                classes2 = netout[row,col,b,10:]
+
+                if np.sum(classes1) > 0:# Level1 级别检出
                     # first 4 elements are x, y, w, and h
                     x, y, w, h = netout[row,col,b,:4]
 
@@ -103,20 +119,21 @@ def decode_netout(netout, anchors, nb_class, obj_threshold=0.3, nms_threshold=0.
                     h = anchors[2 * b + 1] * np.exp(h) / grid_h # unit: image height
                     confidence = netout[row,col,b,4]
                     
-                    box = BoundBox(x-w/2, y-h/2, x+w/2, y+h/2, confidence, classes)
+                    box = BoundBox(x-w/2, y-h/2, x+w/2, y+h/2, confidence, class1 = classes1,class2=classes2)
                     
                     boxes.append(box)
 
     # suppress non-maximal boxes
-    sorted_indices = list(reversed(np.argsort([max(box.classes) for box in boxes])))
+    sorted_indices = list(reversed(np.argsort([max(box.class2) for box in boxes])))#按Level2级类型进行抑制，避免同L1不同L2目标被抑制的情况发生
     for i in range(len(sorted_indices)):
         index_i = sorted_indices[i]
         for j in range(i+1, len(sorted_indices)):
             index_j = sorted_indices[j]
 
             if bbox_iou(boxes[index_i], boxes[index_j]) >= nms_threshold:
-                boxes[index_j].classes = np.zeros(shape=boxes[index_j].classes.shape)
-                        
+                boxes[index_j].class1 = np.zeros(shape=boxes[index_j].class1.shape)
+                boxes[index_j].class2 = np.zeros(shape=boxes[index_j].class2.shape)
+
     # remove the boxes which are less likely than a obj_threshold
     boxes = [box for box in boxes if box.get_score() > obj_threshold]
     
