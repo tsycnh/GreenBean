@@ -469,7 +469,7 @@ class YOLO(object):
 
         # compute mAP by comparing all detections and all annotations
         average_precisions = {}
-        
+
         for label in range(generator.num_classes()):
             false_positives = np.zeros((0,))
             true_positives  = np.zeros((0,))
@@ -521,7 +521,7 @@ class YOLO(object):
             precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
 
             # compute average precision
-            average_precision  = compute_ap(recall, precision)  
+            average_precision  = compute_ap(recall, precision)
             average_precisions[label] = average_precision
 
         return average_precisions    

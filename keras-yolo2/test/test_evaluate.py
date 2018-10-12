@@ -11,9 +11,9 @@ from st_utils import BatchGenerator_for_USTB,draw_detections
 if __name__ == "__main__":
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    config_path = './config_USTB_VerticalScratch.json'
-    weight_path = './full_yolo_USTB_7种缺陷_实验1.h5'
-    save_path = "detection_result_20181010a"
+    config_path = 'config_USTB_win.json'
+    weight_path = 'tmp/20181010_full_yolo_USTB_wordtree_ckpt_51_0.27.h5'
+    save_path = "detection_result_20181012a"
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
@@ -52,8 +52,10 @@ if __name__ == "__main__":
     yolo = YOLO(backend=config['model']['backend'],
                 input_size=config['model']['input_size'],
                 labels=config['model']['labels'],
+                struct_labels=config['model']['struct_labels'],
                 max_box_per_image=config['model']['max_box_per_image'],
-                anchors=config['model']['anchors'])
+                anchors=config['model']['anchors'],
+                config = config)
 
     ###############################
     #   Load the pretrained weights (if any)
