@@ -401,13 +401,15 @@ class YOLO(object):
         # gather all detections and annotations
         all_detections     = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
         all_annotations    = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
+        total_images = generator.size()
+
         if save_path != None:
             if os.path.exists(save_path):
                 shutil.rmtree(save_path)
             os.mkdir(save_path)
         start_time = time.time()
         # 对验证集里的所有的图像逐一的进行验证
-        for i in range(generator.size()):
+        for i in range(total_images):
             # 载入带黑边的，符合网络尺寸的大图
             image_data = generator.load_image(i)
             aug_image = image_data['aug']['image']
@@ -427,8 +429,9 @@ class YOLO(object):
             print('predicted boxes:',pred_boxes)
             # TODO:改！！！！
             score = np.array([box.score for box in pred_boxes])
-            pred_labels = np.array([box.label for box in pred_boxes])        
-            
+            pred_label1s = np.array([box.label1 for box in pred_boxes])
+            pred_label2s = np.array([box.label2 for box in pred_boxes])
+
             if len(pred_boxes) > 0:
                 pred_boxes = np.array([[box.xmin*raw_width, box.ymin*raw_height, box.xmax*raw_width, box.ymax*raw_height, box.score] for box in pred_boxes])
             else:
@@ -452,7 +455,8 @@ class YOLO(object):
 
                 result_img = draw_detections(bg=aug_image,detections=dts,gt=gts,hide_gt=True,hide_confidence=True)
                 cv2.imwrite(save_path+'/%d.jpg'%i,result_img,[int(cv2.IMWRITE_JPEG_QUALITY), 100])
-            # ----------------------------
+
+            # -- 准备计算mAP --
             # copy detections to all_detections
             for label in range(generator.num_classes()):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
@@ -466,7 +470,9 @@ class YOLO(object):
         end_time = time.time()
         print("elapsed time: ",start_time-end_time)
         print('total images: ',generator.size())
-        total_images = generator.size()
+
+        # -- calc mAP --
+        exit()  # 先不算mAP
 
         mAP = self.calc_mAP(all_detections,all_annotations,generator.num_classes(),total_images,iou_threshold)
 
