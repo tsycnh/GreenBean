@@ -4,12 +4,13 @@
         "input_size":           416,
         "anchors":              [1.60,11.75, 2.38,2.92, 4.19,6.16, 8.34,8.40, 12.13,2.08],
         "max_box_per_image":    8,
-        "labels":               ["WaterDrop"]
+        "labels":               ["WaterDrop","RollMark","HorizontalCrack","Scale","WaterStain","VerticalCrack","Upwarping"]
+
     },
 
     "train": {
-        "train_image_folder":   "D:/TSY/USTBdata/data/train/images/",
-        "train_annot_folder":   "D:/TSY/USTBdata/data/train/annotations/",
+        "train_image_folder":   "D:/TSY/Data/USTBdata/train/images/",
+        "train_annot_folder":   "D:/TSY/Data/USTBdata/train/annotations/",
           
         "train_times":          5,
         "pretrained_weights":   "",
@@ -28,8 +29,8 @@
     },
 
     "valid": {
-        "valid_image_folder":   "D:/TSY/USTBdata/data/test/images/",
-        "valid_annot_folder":   "D:/TSY/USTBdata/data/test/annotations/",
+        "valid_image_folder":   "D:/TSY/Data/USTBdata/test/images/",
+        "valid_annot_folder":   "D:/TSY/Data/USTBdata/test/annotations/",
 
         "valid_times":          1
     }

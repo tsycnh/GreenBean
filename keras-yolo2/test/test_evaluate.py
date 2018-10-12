@@ -11,8 +11,8 @@ from st_utils import BatchGenerator_for_USTB,draw_detections
 if __name__ == "__main__":
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    config_path = './config_USTB.json'
-    weight_path = './full_yolo_USTB_7种缺陷_实验1.h5'
+    config_path = './config_USTB_win.json'
+    weight_path = './full_yolo_USTB_7defects_experiemnt1.h5'
     save_path = "detection_result_20181012a"
     save_path = None
 

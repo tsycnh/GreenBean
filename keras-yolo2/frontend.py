@@ -508,6 +508,8 @@ class YOLO(object):
             average_precision = compute_ap(recall, precision)
             average_precisions[label] = average_precision
 
+        return average_precisions
+
     # 现在单看predict函数，输入一张图，强制拉伸为416*416，检测输出bbox
     # 更改：将强制拉伸解除。意味着输入必须是合规大小的图像
     def predict(self, image):
