@@ -11,9 +11,10 @@ from st_utils import BatchGenerator_for_USTB,draw_detections
 if __name__ == "__main__":
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-    config_path = './config_USTB_VerticalScratch.json'
+    config_path = './config_USTB.json'
     weight_path = './full_yolo_USTB_7种缺陷_实验1.h5'
-    save_path = "detection_result_20181010a"
+    save_path = "detection_result_20181012a"
+    save_path = None
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())

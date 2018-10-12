@@ -445,20 +445,25 @@ class YOLO(object):
         end_time = time.time()
         print("elapsed time: ",start_time-end_time)
         print('total images: ',generator.size())
+        total_images = generator.size()
 
+        mAP = self.calc_mAP(all_detections,all_annotations,generator.num_classes(),total_images,iou_threshold)
+
+        return mAP
+    def calc_mAP(self,all_detections,all_annotations,num_classes,total_images_count,iou_threshold = 0.5):
         # compute mAP by comparing all detections and all annotations
         average_precisions = {}
-        
-        for label in range(generator.num_classes()):
+
+        for label in range(num_classes):
             false_positives = np.zeros((0,))
-            true_positives  = np.zeros((0,))
-            scores          = np.zeros((0,))
+            true_positives = np.zeros((0,))
+            scores = np.zeros((0,))
             num_annotations = 0.0
 
-            for i in range(generator.size()):
-                detections           = all_detections[i][label]
-                annotations          = all_annotations[i][label]
-                num_annotations     += annotations.shape[0]
+            for i in range(total_images_count):
+                detections = all_detections[i][label]
+                annotations = all_annotations[i][label]
+                num_annotations += annotations.shape[0]
                 detected_annotations = []
 
                 for d in detections:
@@ -466,20 +471,20 @@ class YOLO(object):
 
                     if annotations.shape[0] == 0:
                         false_positives = np.append(false_positives, 1)
-                        true_positives  = np.append(true_positives, 0)
+                        true_positives = np.append(true_positives, 0)
                         continue
 
-                    overlaps            = compute_overlap(np.expand_dims(d, axis=0), annotations)
+                    overlaps = compute_overlap(np.expand_dims(d, axis=0), annotations)
                     assigned_annotation = np.argmax(overlaps, axis=1)
-                    max_overlap         = overlaps[0, assigned_annotation]
+                    max_overlap = overlaps[0, assigned_annotation]
 
                     if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:
                         false_positives = np.append(false_positives, 0)
-                        true_positives  = np.append(true_positives, 1)
+                        true_positives = np.append(true_positives, 1)
                         detected_annotations.append(assigned_annotation)
                     else:
                         false_positives = np.append(false_positives, 1)
-                        true_positives  = np.append(true_positives, 0)
+                        true_positives = np.append(true_positives, 0)
 
             # no annotations -> AP for this class is 0 (is this correct?)
             if num_annotations == 0:
@@ -487,23 +492,21 @@ class YOLO(object):
                 continue
 
             # sort by score
-            indices         = np.argsort(-scores)
+            indices = np.argsort(-scores)
             false_positives = false_positives[indices]
-            true_positives  = true_positives[indices]
+            true_positives = true_positives[indices]
 
             # compute false positives and true positives
             false_positives = np.cumsum(false_positives)
-            true_positives  = np.cumsum(true_positives)
+            true_positives = np.cumsum(true_positives)
 
             # compute recall and precision
-            recall    = true_positives / num_annotations
+            recall = true_positives / num_annotations
             precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
 
             # compute average precision
-            average_precision  = compute_ap(recall, precision)  
+            average_precision = compute_ap(recall, precision)
             average_precisions[label] = average_precision
-
-        return average_precisions    
 
     # 现在单看predict函数，输入一张图，强制拉伸为416*416，检测输出bbox
     # 更改：将强制拉伸解除。意味着输入必须是合规大小的图像
