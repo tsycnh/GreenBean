@@ -442,21 +442,9 @@ class YOLO(object):
             pred_labels = pred_labels[score_sort]
             pred_boxes  = pred_boxes[score_sort]
             # -- draw detection results --
-            if save_path != None:
-                dts = []
-                labels = []
-                gts = []
-                for k,pred_box in enumerate(pred_boxes):
-                    dt = [int(pred_box[0]),int(pred_box[1]),int(pred_box[2]),int(pred_box[3]),
-                          round(pred_box[4],2),self.labels[pred_labels[k]]]
-                    dts.append(dt)
-                for l,gt_box in enumerate(aug_annotation.bounding_boxes):
-                    gts.append([gt_box.x1,gt_box.y1,gt_box.x2,gt_box.y2,self.labels[aug_class_id[l]]])
 
-                result_img = draw_detections(bg=aug_image,detections=dts,gt=gts,hide_gt=True,hide_confidence=True)
-                cv2.imwrite(save_path+'/%d.jpg'%i,result_img,[int(cv2.IMWRITE_JPEG_QUALITY), 100])
+            self.draw_result(self.labels,save_path,pred_boxes,pred_labels,aug_annotation,aug_class_id,aug_image,i)
 
-            # -- 准备计算mAP --
             # copy detections to all_detections
             for label in range(generator.num_classes()):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
@@ -540,7 +528,20 @@ class YOLO(object):
             average_precisions[label] = average_precision
 
         return average_precisions
+    def draw_result(self,label_list,save_path,pred_boxes,pred_labels,aug_annotation,aug_class_id,aug_image,i):
+        if save_path != None:
+            dts = []
+            labels = []
+            gts = []
+            for k, pred_box in enumerate(pred_boxes):
+                dt = [int(pred_box[0]), int(pred_box[1]), int(pred_box[2]), int(pred_box[3]),
+                      round(pred_box[4], 2), label_list[pred_labels[k]]]
+                dts.append(dt)
+            for l, gt_box in enumerate(aug_annotation.bounding_boxes):
+                gts.append([gt_box.x1, gt_box.y1, gt_box.x2, gt_box.y2, label_list[aug_class_id[l]]])
 
+            result_img = draw_detections(bg=aug_image, detections=dts, gt=gts, hide_gt=False, hide_confidence=False)
+            cv2.imwrite(save_path + '/%d.jpg' % i, result_img, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
     # 现在单看predict函数，输入一张图，强制拉伸为416*416，检测输出bbox
     # 更改：将强制拉伸解除。意味着输入必须是合规大小的图像
     def predict(self, image):
