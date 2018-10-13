@@ -415,6 +415,7 @@ class YOLO(object):
             aug_image = image_data['aug']['image']
             aug_annotation = image_data['aug']['annotation']# ground truth
             aug_class_id = image_data['aug']['class_id']
+            aug_class = image_data['aug']['class']
             annots = []
             for j,obj in enumerate(aug_annotation.bounding_boxes):
                 annot = [obj.x1, obj.y1, obj.x2, obj.y2, aug_class_id[j]]
@@ -426,6 +427,7 @@ class YOLO(object):
 
             # make the boxes and the labels
             pred_boxes  = self.predict(aug_image)
+            pred_boxes_backup = pred_boxes
             print('predicted boxes:',pred_boxes)
             # TODO:改！！！！
             score = np.array([box.score for box in pred_boxes])
@@ -437,14 +439,18 @@ class YOLO(object):
             else:
                 pred_boxes = np.array([[]])  
             
-            # sort the boxes and the labels according to scores
+
+            # -- draw detection results --
+            l1_labels = ["HorizontalDefect","VerticalDefect","AreaDefect","SpotDefect","OtherDefect"]
+            l1_labels = ["HD","VD","AD","SD","OD"]
+            l2_labels = self.labels
+            self.draw_result(l1_labels,l2_labels,save_path,pred_boxes_backup,aug_annotation,aug_class,aug_image,i)
+
+            '''
+               #         sort the boxes and the labels according to scores
             score_sort = np.argsort(-score)
             pred_labels = pred_labels[score_sort]
             pred_boxes  = pred_boxes[score_sort]
-            # -- draw detection results --
-
-            self.draw_result(self.labels,save_path,pred_boxes,pred_labels,aug_annotation,aug_class_id,aug_image,i)
-
             # copy detections to all_detections
             for label in range(generator.num_classes()):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
@@ -454,7 +460,7 @@ class YOLO(object):
             # copy detections to all_annotations
             for label in range(generator.num_classes()):
                 all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
-
+            '''
         end_time = time.time()
         print("elapsed time: ",start_time-end_time)
         print('total images: ',generator.size())
@@ -528,19 +534,35 @@ class YOLO(object):
             average_precisions[label] = average_precision
 
         return average_precisions
-    def draw_result(self,label_list,save_path,pred_boxes,pred_labels,aug_annotation,aug_class_id,aug_image,i):
+    def draw_result(self,label1_list,label2_list,save_path,pred_boxes,aug_annotation,aug_class,aug_image,i):
         if save_path != None:
             dts = []
             labels = []
             gts = []
+            raw_height, raw_width, raw_channels = aug_image.shape
+
             for k, pred_box in enumerate(pred_boxes):
-                dt = [int(pred_box[0]), int(pred_box[1]), int(pred_box[2]), int(pred_box[3]),
-                      round(pred_box[4], 2), label_list[pred_labels[k]]]
+                l1_class = pred_box.label1
+                l2_class = pred_box.label2
+                x1 = pred_box.xmin*raw_width
+                y1 = pred_box.ymin*raw_height
+                x2 = pred_box.xmax*raw_width
+                y2 = pred_box.ymax*raw_height
+
+                l2_score = round(pred_box.score2*pred_box.score1, 3)
+                l2_score_str = ""
+                if l2_score >= 0.5:# obj threshold
+                    l2_score_str = "%s%.2f"%(label2_list[l2_class],l2_score)
+                else:
+                    l2_score_str = "Unknown"
+
+                dt = [int(x1), int(y1), int(x2), int(y2),
+                      "", "%s%.2f %s"%(label1_list[l1_class],round(pred_box.score1, 2),l2_score_str)]
                 dts.append(dt)
             for l, gt_box in enumerate(aug_annotation.bounding_boxes):
-                gts.append([gt_box.x1, gt_box.y1, gt_box.x2, gt_box.y2, label_list[aug_class_id[l]]])
+                gts.append([gt_box.x1, gt_box.y1, gt_box.x2, gt_box.y2, aug_class[l]])
 
-            result_img = draw_detections(bg=aug_image, detections=dts, gt=gts, hide_gt=False, hide_confidence=False)
+            result_img = draw_detections(bg=aug_image, detections=dts, gt=gts, hide_gt=True, hide_confidence=False)
             cv2.imwrite(save_path + '/%d.jpg' % i, result_img, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
     # 现在单看predict函数，输入一张图，强制拉伸为416*416，检测输出bbox
     # 更改：将强制拉伸解除。意味着输入必须是合规大小的图像
@@ -556,6 +578,6 @@ class YOLO(object):
         dummy_array = np.zeros((1,1,1,1,self.max_box_per_image,4))
 
         netout = self.model.predict([input_image, dummy_array])[0]
-        boxes  = decode_netout(netout, self.anchors, self.nb_class)
+        boxes  = decode_netout(netout, self.anchors, self.nb_class,obj_threshold=0.5)
 
         return boxes
