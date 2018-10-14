@@ -441,12 +441,12 @@ class YOLO(object):
             
 
             # -- draw detection results --
-            l1_labels = ["HorizontalDefect","VerticalDefect","AreaDefect","SpotDefect","OtherDefect"]
+            # l1_labels = ["HorizontalDefect","VerticalDefect","AreaDefect","SpotDefect","OtherDefect"]
             l1_labels = ["HD","VD","AD","SD","OD"]
             l2_labels = self.labels
             self.draw_result(l1_labels,l2_labels,save_path,pred_boxes_backup,aug_annotation,aug_class,aug_image,i)
 
-            '''
+
                #         sort the boxes and the labels according to scores
             score_sort = np.argsort(-score)
             pred_labels = pred_labels[score_sort]
@@ -460,7 +460,7 @@ class YOLO(object):
             # copy detections to all_annotations
             for label in range(generator.num_classes()):
                 all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
-            '''
+
         end_time = time.time()
         print("elapsed time: ",start_time-end_time)
         print('total images: ',generator.size())
@@ -468,7 +468,12 @@ class YOLO(object):
         # -- calc mAP --
         exit()  # 先不算mAP
 
-        mAP = self.calc_mAP(all_detections,all_annotations,generator.num_classes(),total_images,iou_threshold)
+        mAP = self.calc_mAP(all_detections,
+                            all_annotations,
+                            generator.num_classes(),
+                            total_images,
+                            iou_threshold)
+
 
         return mAP
     def calc_mAP(self,all_detections,all_annotations,num_classes,total_images_count,iou_threshold = 0.5):
