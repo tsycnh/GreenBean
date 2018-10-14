@@ -378,7 +378,7 @@ class YOLO(object):
                  iou_threshold=0.3,
                  score_threshold=0.3,
                  max_detections=100,
-                 save_path=None):
+                 save_path=None,mAP_level=-1):
         """ Evaluate a given dataset using a given model.
         code originally from https://github.com/fizyr/keras-retinanet
         '''
@@ -399,9 +399,17 @@ class YOLO(object):
             A dict mapping class names to mAP scores.
         """    
         # gather all detections and annotations
-        all_detections     = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
-        all_annotations    = [[None for i in range(generator.num_classes())] for j in range(generator.size())]
         total_images = generator.size()
+
+        if mAP_level == 1:
+            total_classes = 5
+        elif mAP_level == 2:
+            total_classes = 10
+        else:
+            print("mAP_level wrong!")
+            exit()
+        all_detections     = [[None for i in range(total_classes)] for j in range(total_images)]
+        all_annotations    = [[None for i in range(total_classes)] for j in range(total_images)]
 
         if save_path != None:
             if os.path.exists(save_path):
@@ -414,11 +422,14 @@ class YOLO(object):
             image_data = generator.load_image(i)
             aug_image = image_data['aug']['image']
             aug_annotation = image_data['aug']['annotation']# ground truth
-            aug_class_id = image_data['aug']['class_id']
             aug_class = image_data['aug']['class']
             annots = []
             for j,obj in enumerate(aug_annotation.bounding_boxes):
-                annot = [obj.x1, obj.y1, obj.x2, obj.y2, aug_class_id[j]]
+                if mAP_level == 1:
+                    class_id = self.struct_labels[aug_class[j]][0]
+                elif mAP_level == 2:
+                    class_id = self.struct_labels[aug_class[j]][1]
+                annot = [obj.x1, obj.y1, obj.x2, obj.y2, class_id]
                 annots += [annot]
 
             if len(annots) == 0: annots = [[]]
@@ -428,14 +439,23 @@ class YOLO(object):
             # make the boxes and the labels
             pred_boxes  = self.predict(aug_image)
             pred_boxes_backup = pred_boxes
-            print('predicted boxes:',pred_boxes)
-            # TODO:改！！！！
-            score = np.array([box.score for box in pred_boxes])
-            pred_label1s = np.array([box.label1 for box in pred_boxes])
-            pred_label2s = np.array([box.label2 for box in pred_boxes])
+            print(i+1,"/",total_images,' predicted boxes:',len(pred_boxes))
+
+            if mAP_level == 1:
+                score = np.array([box.score1 for box in pred_boxes])
+                pred_labels = np.array([box.label1 for box in pred_boxes])
+            elif mAP_level ==2:
+                score = np.array([box.score1*box.score2 for box in pred_boxes])
+                pred_labels = np.array([box.label2 for box in pred_boxes])
+            else:
+                print("mAP_level wrong!!!")
+                exit()
 
             if len(pred_boxes) > 0:
-                pred_boxes = np.array([[box.xmin*raw_width, box.ymin*raw_height, box.xmax*raw_width, box.ymax*raw_height, box.score] for box in pred_boxes])
+                if mAP_level == 1:
+                    pred_boxes = np.array([[box.xmin*raw_width, box.ymin*raw_height, box.xmax*raw_width, box.ymax*raw_height, box.score1] for box in pred_boxes])
+                elif mAP_level == 2:
+                    pred_boxes = np.array([[box.xmin*raw_width, box.ymin*raw_height, box.xmax*raw_width, box.ymax*raw_height, box.score1*box.score2] for box in pred_boxes])
             else:
                 pred_boxes = np.array([[]])  
             
@@ -452,25 +472,25 @@ class YOLO(object):
             pred_labels = pred_labels[score_sort]
             pred_boxes  = pred_boxes[score_sort]
             # copy detections to all_detections
-            for label in range(generator.num_classes()):
+            for label in range(total_classes):
                 all_detections[i][label] = pred_boxes[pred_labels == label, :]
                 
             # annotations = generator.load_annotation(i)
             
             # copy detections to all_annotations
-            for label in range(generator.num_classes()):
+            for label in range(total_classes):
                 all_annotations[i][label] = annotations[annotations[:, 4] == label, :4].copy()
 
         end_time = time.time()
-        print("elapsed time: ",start_time-end_time)
-        print('total images: ',generator.size())
+        print("elapsed time: ",-start_time+end_time," s")
+        print('total images: ',total_images)
 
         # -- calc mAP --
-        exit()  # 先不算mAP
+        # exit()  # 先不算mAP
 
         mAP = self.calc_mAP(all_detections,
                             all_annotations,
-                            generator.num_classes(),
+                            total_classes,
                             total_images,
                             iou_threshold)
 

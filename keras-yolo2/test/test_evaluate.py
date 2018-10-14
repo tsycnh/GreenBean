@@ -14,6 +14,7 @@ if __name__ == "__main__":
     config_path = 'config_USTB.json'
     weight_path = 'tmp/20181010_full_yolo_USTB_wordtree_ckpt_51_0.27.h5'
     save_path = "detection_result_20181012f"
+    save_path = None
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
@@ -78,10 +79,17 @@ if __name__ == "__main__":
         norm = yolo.feature_extractor.normalize,
         jitter = False)
 
-    average_precisions = yolo.evaluate(valid_generator,save_path=save_path,iou_threshold=0.5)
+    mAP_level = 2
+    average_precisions = yolo.evaluate(valid_generator,save_path=save_path,iou_threshold=0.3,mAP_level=mAP_level)
 
     # print evaluation
-    for label, average_precision in average_precisions.items():
-        print(yolo.labels[label], '{:.4f}'.format(average_precision))
-    print('mAP: {:.4f}'.format(sum(average_precisions.values()) / len(average_precisions)))
+    if mAP_level == 1:
+        labels = ["HorizontalDefect","VerticalDefect","AreaDefect","SpotDefect","OtherDefect"]
+    elif mAP_level == 2:
+        labels = config['model']['labels']
 
+    sum=0
+    for i in range(len(labels)):
+        sum+=average_precisions[i]
+        print(labels[i], '{:.4f}'.format(average_precisions[i]))
+    print('mAP: {:.4f}'.format(sum / len(labels)))
