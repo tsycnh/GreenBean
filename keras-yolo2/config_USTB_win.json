@@ -4,7 +4,7 @@
         "input_size":           416,
         "anchors":              [1.60,11.75, 2.38,2.92, 4.19,6.16, 8.34,8.40, 12.13,2.08],
         "max_box_per_image":    8,
-        "labels":               ["WaterDrop","RollMark","HorizontalCrack","Scale","WaterStain","VerticalCrack","Upwarping"],
+        "labels":               ["WaterDrop","RollMark","HorizontalCrack","Scale","WaterStain","VerticalCrack","Upwarping","VerticalScratch"],
         "struct_labels":{
             "WaterDrop":        [3,0],
             "RollMark":         [4,1],
@@ -12,7 +12,8 @@
             "Scale":            [2,3],
             "WaterStain":       [1,4],
             "VerticalCrack":    [1,5],
-            "Upwarping":        [2,6]
+            "Upwarping":        [2,6],
+            "VerticalScratch":  [1,7]
         }
     },
 
@@ -31,7 +32,7 @@
         "no_object_scale":      1.0,
         "coord_scale":          1.0,
         "class_scale":          1.0,
-        "log_dir":              "./logs/20181010a",
+        "log_dir":              "./logs/20181013a",
         "saved_weights_name":   "full_yolo_USTB_wordtree",
         "debug":                false
     },
