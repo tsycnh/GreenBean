@@ -28,8 +28,8 @@
     },
 
     "valid": {
-        "valid_image_folder":   "D:/TSY/Data/USTBdata/test/images/",
-        "valid_annot_folder":   "D:/TSY/Data/USTBdata/test/annotations/",
+        "valid_image_folder":   "D:/TSY/Data/USTBdata8class/test/images/",
+        "valid_annot_folder":   "D:/TSY/Data/USTBdata8class/test/annotations/",
 
         "valid_times":          1
     }
