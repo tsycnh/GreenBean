@@ -1,0 +1,46 @@
+{
+    "model" : {
+        "backend":              "Full Yolo",
+        "input_size":           416,
+        "anchors":              [1.60,11.75, 2.38,2.92, 4.19,6.16, 8.34,8.40, 12.13,2.08],
+        "max_box_per_image":    8,
+        "labels":               ["WaterDrop","RollMark","HorizontalCrack","Scale","WaterStain","VerticalCrack","Upwarping"],
+        "struct_labels":{
+            "WaterDrop":        [3,0],
+            "RollMark":         [4,1],
+            "HorizontalCrack":  [0,2],
+            "Scale":            [2,3],
+            "WaterStain":       [1,4],
+            "VerticalCrack":    [1,5],
+            "Upwarping":        [2,6]
+
+        }
+    },
+
+    "train": {
+        "train_image_folder":   "D:/TSY/Data/USTBdata7class/train/images/",
+        "train_annot_folder":   "D:/TSY/Data/USTBdata7class/train/annotations/",
+          
+        "train_times":          5,
+        "pretrained_weights":   "tmp/20181014_full_yolo_USTB_wordtree_ckpt_35_0.33_8class.h5",
+        "batch_size":           8,
+        "learning_rate":        1e-5,
+        "nb_epochs":            50,
+        "warmup_epochs":        3,
+
+        "object_scale":         5.0,
+        "no_object_scale":      1.0,
+        "coord_scale":          1.0,
+        "class_scale":          1.0,
+        "log_dir":              "./logs/20181014a",
+        "saved_weights_name":   "full_yolo_USTB_wordtree",
+        "debug":                false
+    },
+
+    "valid": {
+        "valid_image_folder":   "D:/TSY/Data/USTBdata7class/test/images/",
+        "valid_annot_folder":   "D:/TSY/Data/USTBdata7class/test/annotations/",
+
+        "valid_times":          1
+    }
+}

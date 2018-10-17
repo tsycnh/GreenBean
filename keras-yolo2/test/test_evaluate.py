@@ -12,9 +12,11 @@ if __name__ == "__main__":
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-    config_path = 'config_USTB_win.json'
-    weight_path = 'tmp/20181014_full_yolo_USTB_wordtree_ckpt_35_0.33.h5'
-    save_path = "detection_result_20181014b"
+    config_path = 'config_USTB_win_7class.json'
+    tree_model_7class_path = 'tmp/20181010_full_yolo_USTB_wordtree_ckpt_51_0.27_7class.h5'
+    tree_model_8class_path ='tmp/20181014_full_yolo_USTB_wordtree_ckpt_35_0.33_8class.h5'
+    weight_path = tree_model_7class_path
+    save_path = "detection_result_20181017b"
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
