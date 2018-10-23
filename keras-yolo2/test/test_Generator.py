@@ -6,7 +6,7 @@ import imgaug as ia
 from imgaug import augmenters as iaa
 
 if __name__ == "__main__":
-    config_path = './config_USTB.json'
+    config_path = './config_USTB_win_8class.json'
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
     train_imgs, train_labels = parse_annotation(config['train']['train_annot_folder'],
@@ -26,12 +26,13 @@ if __name__ == "__main__":
                 'TRUE_BOX_BUFFER' : config['model']['max_box_per_image'],
 
             }
-    generator = BatchGenerator_for_USTB(images=train_imgs,config=generator_config,shuffle=False)
+    generator = BatchGenerator_for_USTB(images=train_imgs,config=generator_config,shuffle=False,debug=config['train']['debug'])
 
-    def test_load_image():
-        result = generator.load_image(2)
-        cv2.imshow('img_0', result['aug']['image'])
+    def test_load_image(i):
+        result = generator.load_image(i)
+        cv2.imshow('img', result['aug']['image'])
         print(result['aug']['annotation'])
+        cv2.waitKey(0)
     def test_getitem():
     # print(train_imgs,train_labels)
         generator.debug = False
@@ -40,8 +41,10 @@ if __name__ == "__main__":
         cv2.imshow('output',image)
 
         #绘制bbox需要先project on 已padding的黑边图像，然后再on到原图
-    test_getitem()
-    # test_load_image()
+    # test_getitem()
+    for i in range(100):
+        test_load_image(i)
+
 
     cv2.waitKey(0)
 

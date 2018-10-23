@@ -13,10 +13,11 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
     config_path = 'config_USTB_win_7class.json'
-    tree_model_7class_path = 'tmp/20181010_full_yolo_USTB_wordtree_ckpt_51_0.27_7class.h5'
-    tree_model_8class_path ='tmp/20181014_full_yolo_USTB_wordtree_ckpt_35_0.33_8class.h5'
+    tree_model_7class_path = 'tmp/20181019_full_yolo_USTB_wordtree_ckpt_51_0.13_7class.h5'
+    tree_model_8class_path ='tmp/20181018_full_yolo_USTB_wordtree_ckpt_15_0.18_8class.h5'
     weight_path = tree_model_7class_path
-    save_path = "detection_result_20181017b"
+    save_path = "detection_result_20181019a"
+    mAP_level = 2
 
     with open(config_path, encoding='UTF-8') as config_buffer:
         config = json.loads(config_buffer.read())
@@ -79,9 +80,8 @@ if __name__ == "__main__":
             }
     valid_generator = BatchGenerator_for_USTB(valid_imgs_with_objs,generator_config,
         norm = yolo.feature_extractor.normalize,
-        jitter = False)
+        jitter = False,test=True)
 
-    mAP_level = 2
     average_precisions = yolo.evaluate(valid_generator,save_path=save_path,iou_threshold=0.3,mAP_level=mAP_level)
 
     # print evaluation

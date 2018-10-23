@@ -83,7 +83,8 @@ class BatchGenerator_for_USTB(Sequence):
                        shuffle=True,
                        jitter=True,
                        norm=None,
-                 debug=False):
+                        test=False,
+                        debug=False):
         self.generator = None
 
         self.images_with_objs = images
@@ -102,12 +103,20 @@ class BatchGenerator_for_USTB(Sequence):
         # in 50% of all cases. In all other cases they will sample new values
         # _per channel_.self.config['IMAGE_H'], self.config['IMAGE_W']
         sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+        if not test:
+            self.aug_pipe = iaa.Sequential([
+                # iaa.Affine(scale=0.9),
+                iaa.Pad(percent=(0,0.2)),#增加0%~20%的pad
+                                            SquarePad(),
+                                            sometimes(iaa.Fliplr(p=1)),
+                                            sometimes(iaa.Flipud(p=1)),
+                                            iaa.Scale({"height": self.config['IMAGE_H'], "width": self.config['IMAGE_W']})])
+            # if shuffle: np.random.shuffle(self.images)
+        else:
+            self.aug_pipe = iaa.Sequential([
+                                            SquarePad(),
+                                            iaa.Scale({"height": self.config['IMAGE_H'], "width": self.config['IMAGE_W']})])
 
-        self.aug_pipe = iaa.Sequential([SquarePad(),
-                                        sometimes(iaa.Fliplr(p=1)),
-                                        sometimes(iaa.Flipud(p=1)),
-                                        iaa.Scale({"height": self.config['IMAGE_H'], "width": self.config['IMAGE_W']})])
-        # if shuffle: np.random.shuffle(self.images)
 
     def __len__(self):
         return int(np.ceil(float(len(self.images_with_objs)) / self.config['BATCH_SIZE']))
@@ -291,7 +300,6 @@ class BatchGenerator_for_USTB(Sequence):
         #print('bbses before:',bbses)
         # 3. 图像预处理
         aug_pipe_det = self.aug_pipe.to_deterministic()
-
         aug_imgs = aug_pipe_det.augment_images(imgs)
         aug_bbses = aug_pipe_det.augment_bounding_boxes(bbses)
         aug_clses = ys
